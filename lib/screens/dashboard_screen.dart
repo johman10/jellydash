@@ -25,7 +25,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadSettings();
-    _startPolling();
   }
 
   Future<void> _loadSettings() async {
@@ -38,10 +37,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _apiService = JellyfinApiService(baseUrl: baseUrl, apiKey: apiKey);
       _initialLoading = true;
     });
+    _startPolling();
   }
 
   void _startPolling() {
     _pollingTimer?.cancel();
+    _fetchSessions();
     _pollingTimer =
         Timer.periodic(Duration(seconds: _pollingInterval), (timer) {
       _fetchSessions();
@@ -88,12 +89,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: _sessions!.map((session) {
                                   final user = session['UserName'] ?? 'Unknown';
-                                  final nowPlaying = session['NowPlayingItem']?['Name'] ?? 'Idle';
+                                  final nowPlaying = session['NowPlayingItem']
+                                          ?['Name'] ??
+                                      'Idle';
                                   return Text('$user: $nowPlaying');
                                 }).toList(),
                               )
-                            : const Text('No active sessions.')
-                          ),
+                            : const Text('No active sessions.')),
                   ),
                   const SizedBox(height: 24),
                   // Recent Activity Widget (placeholder)
