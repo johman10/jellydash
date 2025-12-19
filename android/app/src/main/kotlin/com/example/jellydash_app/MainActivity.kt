@@ -1,4 +1,4 @@
-package com.example.jellydash_app
+package com.example.jellydash
 
 import io.flutter.embedding.android.FlutterActivity
 
