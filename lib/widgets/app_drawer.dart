@@ -1,9 +1,7 @@
-// ...existing code...
-/// AppDrawer provides the navigation/settings drawer for the app.
 import 'package:flutter/material.dart';
 
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({Key? key}) : super(key: key);
+  const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,11 +13,16 @@ class AppDrawer extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.deepPurple,
             ),
-            child: Text('Jellydash Menu', style: TextStyle(color: Colors.white, fontSize: 24)),
+            child: Text('Jellydash Menu',
+                style: TextStyle(color: Colors.white, fontSize: 24)),
           ),
-          const ListTile(
+          ListTile(
             leading: Icon(Icons.dashboard),
             title: Text('Dashboard'),
+            onTap: () async {
+              Navigator.of(context).pop(); // Close drawer
+              await Navigator.of(context).pushNamed('/');
+            },
           ),
           ListTile(
             leading: const Icon(Icons.settings),
@@ -29,7 +32,6 @@ class AppDrawer extends StatelessWidget {
               await Navigator.of(context).pushNamed('/settings');
             },
           ),
-          // Add more navigation items here
         ],
       ),
     );

@@ -1,8 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Service for loading and saving application settings.
-/// Uses shared_preferences for persistent storage.
-
 class AppSettingsService {
   static final AppSettingsService _instance = AppSettingsService._internal();
   factory AppSettingsService() => _instance;

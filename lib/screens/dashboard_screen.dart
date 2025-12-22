@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:focus_detector/focus_detector.dart';
+import 'package:jellydash/scaffolds/app_scaffold.dart';
+import 'package:jellydash/types/session.dart';
 import 'dart:async';
 import '../services/app_settings_service.dart';
 import '../services/jellyfin_api_service.dart';
-import '../widgets/current_activity_card.dart';
+import '../widgets/current_activities.dart';
 import '../widgets/recent_activity_card.dart';
-import '../widgets/app_drawer.dart';
 
 class DashboardScreen extends StatefulWidget {
   final JellyfinApiService? apiService;
@@ -16,7 +18,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late JellyfinApiService _apiService;
-  List<dynamic>? _sessions;
+  List<Session> _sessions = [];
   bool _initialLoading = true;
   int _pollingInterval = 10;
   Timer? _pollingTimer;
@@ -37,7 +39,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _apiService = JellyfinApiService(baseUrl: baseUrl, apiKey: apiKey);
       _initialLoading = true;
     });
-    _startPolling();
   }
 
   void _startPolling() {
@@ -66,46 +67,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Jellydash'),
-      ),
-      drawer: const AppDrawer(),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1200),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 24),
-                  // Current Activity Widget
-                  CurrentActivityCard(
-                    child: _initialLoading
-                        ? const CircularProgressIndicator()
-                        : (_sessions != null && _sessions!.isNotEmpty
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: _sessions!.map((session) {
-                                  final user = session['UserName'] ?? 'Unknown';
-                                  final nowPlaying = session['NowPlayingItem']
-                                          ?['Name'] ??
-                                      'Idle';
-                                  return Text('$user: $nowPlaying');
-                                }).toList(),
-                              )
-                            : const Text('No active sessions.')),
-                  ),
-                  const SizedBox(height: 24),
-                  // Recent Activity Widget (placeholder)
-                  const RecentActivityCard(),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+    return AppScaffold(
+      children: [
+        FocusDetector(
+          onFocusLost: dispose,
+          onFocusGained: _startPolling,
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(spacing: 16, children: [
+              CurrentActivities(
+                  isLoading: _initialLoading, sessions: _sessions),
+              const RecentActivityCard(),
+            ]),
+          ),
+        ),
+      ],
     );
   }
 }
