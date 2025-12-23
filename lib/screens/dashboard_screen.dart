@@ -23,29 +23,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _pollingInterval = 10;
   Timer? _pollingTimer;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-  }
+  Future<void> _startPolling() async {
+     _pollingTimer?.cancel();
 
-  Future<void> _loadSettings() async {
     final service = AppSettingsService();
     final baseUrl = await service.loadJellyfinBaseUrl();
     final apiKey = await service.loadJellyfinApiKey();
     final pollingInterval = await service.loadPollingInterval();
+
     setState(() {
       _pollingInterval = pollingInterval;
       _apiService = JellyfinApiService(baseUrl: baseUrl, apiKey: apiKey);
       _initialLoading = true;
     });
-  }
 
-  void _startPolling() {
-    _pollingTimer?.cancel();
     _fetchSessions();
-    _pollingTimer =
-        Timer.periodic(Duration(seconds: _pollingInterval), (timer) {
+    _pollingTimer = Timer.periodic(Duration(seconds: _pollingInterval), (timer) {
       _fetchSessions();
     });
   }
@@ -59,10 +52,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  @override
-  void dispose() {
+  void _stopPolling() {
     _pollingTimer?.cancel();
-    super.dispose();
   }
 
   @override
@@ -70,7 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return AppScaffold(
       children: [
         FocusDetector(
-          onFocusLost: dispose,
+          onFocusLost: _stopPolling,
           onFocusGained: _startPolling,
           child: SizedBox(
             width: double.infinity,
