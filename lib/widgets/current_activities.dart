@@ -11,15 +11,17 @@ class CurrentActivities extends StatelessWidget {
 
   Widget getCardContent(bool isLoading, List<Session> sessions) {
     if (isLoading) {
+      // ignore: prefer_const_constructors
       return CircularProgressIndicator();
     }
 
     if (sessions.isEmpty) {
+      // ignore: prefer_const_constructors
       return Text('No current activities.');
     }
 
     return Column(
-      children: sessions!.map((session) {
+      children: sessions.map((session) {
         return CurrentActivityCard(session: session);
       }).toList(),
     );

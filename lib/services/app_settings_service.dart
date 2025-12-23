@@ -1,3 +1,4 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppSettingsService {
@@ -17,19 +18,9 @@ class AppSettingsService {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  /// Loads the theme mode setting ("light", "dark", or "system").
-  Future<String> loadThemeMode() async {
-    return _prefs?.getString(themeModeKey) ?? 'system';
-  }
-
-  /// Saves the theme mode setting.
-  Future<void> saveThemeMode(String mode) async {
-    await _prefs?.setString(themeModeKey, mode);
-  }
-
   /// Loads the Jellyfin base URL.
   Future<String> loadJellyfinBaseUrl() async {
-    return _prefs?.getString(jellyfinBaseUrlKey) ?? 'http://localhost:8096';
+    return _prefs?.getString(jellyfinBaseUrlKey) ?? dotenv.get('DEFAULT_JELLYFIN_HOST', fallback: 'http://localhost:8096');
   }
 
   /// Saves the Jellyfin base URL.
@@ -39,7 +30,7 @@ class AppSettingsService {
 
   /// Loads the Jellyfin API key.
   Future<String> loadJellyfinApiKey() async {
-    return _prefs?.getString(jellyfinApiKeyKey) ?? '';
+    return _prefs?.getString(jellyfinApiKeyKey) ?? dotenv.get('DEFAULT_JELLYFIN_API_KEY', fallback: '');
   }
 
   /// Saves the Jellyfin API key.
@@ -49,7 +40,7 @@ class AppSettingsService {
 
   /// Loads the polling interval (seconds).
   Future<int> loadPollingInterval() async {
-    return _prefs?.getInt(pollingIntervalKey) ?? 10;
+    return _prefs?.getInt(pollingIntervalKey) ?? int.parse(dotenv.get('DEFAULT_POLLING_INTERVAL', fallback: '10'));
   }
 
   /// Saves the polling interval (seconds).

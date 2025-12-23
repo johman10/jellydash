@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
+
+  void _navigateIfNotCurrent(BuildContext context, String routeName) {
+    final String currentLocation = GoRouterState.of(context).uri.toString();
+
+    if (Scaffold.of(context).isDrawerOpen) {
+      Navigator.pop(context);
+    }
+    if (currentLocation != routeName) {
+      context.go(routeName);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,19 +29,17 @@ class AppDrawer extends StatelessWidget {
                 style: TextStyle(color: Colors.white, fontSize: 24)),
           ),
           ListTile(
-            leading: Icon(Icons.dashboard),
-            title: Text('Dashboard'),
-            onTap: () async {
-              Navigator.of(context).pop(); // Close drawer
-              await Navigator.of(context).pushNamed('/');
+            leading: const Icon(Icons.dashboard),
+            title: const Text('Dashboard'),
+            onTap: () {
+              _navigateIfNotCurrent(context, '/');
             },
           ),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
-            onTap: () async {
-              Navigator.of(context).pop(); // Close drawer
-              await Navigator.of(context).pushNamed('/settings');
+            onTap: () {
+              _navigateIfNotCurrent(context, '/settings');
             },
           ),
         ],

@@ -9,7 +9,7 @@ class CurrentActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Text(
-        '${session.userName ?? "Unknown"} is watching ${session.namer} ${session.season}x${session.episode}.',
+        '${session.userName ?? "Unknown"} is watching ${session.name} ${session.season}x${session.episode}.',
       ),
     );
   }

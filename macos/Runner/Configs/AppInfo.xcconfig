@@ -8,7 +8,7 @@
 PRODUCT_NAME = jellydash
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.jellydashApp
+PRODUCT_BUNDLE_IDENTIFIER = com.example.newProject
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.
