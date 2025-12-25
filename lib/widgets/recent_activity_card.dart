@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+
 class RecentActivityCard extends StatelessWidget {
   const RecentActivityCard({super.key});
 
@@ -15,8 +16,6 @@ class RecentActivityCard extends StatelessWidget {
             children: [
               Text('Recent Activity',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('No data yet. Connect to Jellyfin API.'),
             ],
           ),
         ),

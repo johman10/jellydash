@@ -1,6 +1,18 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class AppSettings {
+  final String jellyfinBaseUrl;
+  final String jellyfinApiKey;
+  final int pollingInterval;
+
+  AppSettings({
+    required this.jellyfinBaseUrl,
+    required this.jellyfinApiKey,
+    required this.pollingInterval,
+  });
+}
+
 class AppSettingsService {
   static final AppSettingsService _instance = AppSettingsService._internal();
   factory AppSettingsService() => _instance;
@@ -20,7 +32,8 @@ class AppSettingsService {
 
   /// Loads the Jellyfin base URL.
   Future<String> loadJellyfinBaseUrl() async {
-    return _prefs?.getString(jellyfinBaseUrlKey) ?? dotenv.get('DEFAULT_JELLYFIN_HOST', fallback: 'http://localhost:8096');
+    return _prefs?.getString(jellyfinBaseUrlKey) ??
+        dotenv.get('DEFAULT_JELLYFIN_HOST', fallback: 'http://localhost:8096');
   }
 
   /// Saves the Jellyfin base URL.
@@ -30,7 +43,8 @@ class AppSettingsService {
 
   /// Loads the Jellyfin API key.
   Future<String> loadJellyfinApiKey() async {
-    return _prefs?.getString(jellyfinApiKeyKey) ?? dotenv.get('DEFAULT_JELLYFIN_API_KEY', fallback: '');
+    return _prefs?.getString(jellyfinApiKeyKey) ??
+        dotenv.get('DEFAULT_JELLYFIN_API_KEY', fallback: '');
   }
 
   /// Saves the Jellyfin API key.
@@ -40,11 +54,24 @@ class AppSettingsService {
 
   /// Loads the polling interval (seconds).
   Future<int> loadPollingInterval() async {
-    return _prefs?.getInt(pollingIntervalKey) ?? int.parse(dotenv.get('DEFAULT_POLLING_INTERVAL', fallback: '10'));
+    return _prefs?.getInt(pollingIntervalKey) ??
+        int.parse(dotenv.get('DEFAULT_POLLING_INTERVAL', fallback: '10'));
   }
 
   /// Saves the polling interval (seconds).
   Future<void> savePollingInterval(int interval) async {
     await _prefs?.setInt(pollingIntervalKey, interval);
+  }
+
+  Future<AppSettings> loadSettings() async {
+    final baseUrl = await loadJellyfinBaseUrl();
+    final apiKey = await loadJellyfinApiKey();
+    final pollingInterval = await loadPollingInterval();
+
+    return AppSettings(
+      jellyfinBaseUrl: baseUrl,
+      jellyfinApiKey: apiKey,
+      pollingInterval: pollingInterval,
+    );
   }
 }

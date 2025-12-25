@@ -66,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
-                spacing: 16,
+                // spacing: 16,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Settings',
