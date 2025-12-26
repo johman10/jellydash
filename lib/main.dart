@@ -51,7 +51,23 @@ final GoRouter _router = GoRouter(
       name: 'settings',
       path: '/settings',
       builder: (BuildContext context, GoRouterState state) {
-        return const SettingsScreen();
+        return FutureBuilder<AppSettings>(
+          future: appSettingsService.loadSettings(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            } else if (snapshot.hasData) {
+              final appSettings = snapshot.data!;
+              return SettingsScreen(
+                appSettings: appSettings,
+              );
+            } else {
+              return const Center(child: Text('No settings found.'));
+            }
+          },
+        );
       },
     ),
   ],

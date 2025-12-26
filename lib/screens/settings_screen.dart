@@ -3,37 +3,37 @@ import 'package:jellydash/scaffolds/app_scaffold.dart';
 import '../services/app_settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final AppSettings appSettings;
+
+  const SettingsScreen({super.key, required this.appSettings});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  TextEditingController _pollingIntervalController =
-      TextEditingController(text: '10');
-  TextEditingController _baseUrlController = TextEditingController(text: '');
-  TextEditingController _apiKeyController = TextEditingController(text: '');
+  late final TextEditingController _pollingIntervalController;
+  late final TextEditingController _baseUrlController;
+  late final TextEditingController _apiKeyController;
   final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    _baseUrlController =
+        TextEditingController(text: widget.appSettings.jellyfinBaseUrl);
+    _apiKeyController =
+        TextEditingController(text: widget.appSettings.jellyfinApiKey);
+    _pollingIntervalController = TextEditingController(
+        text: widget.appSettings.pollingInterval.toString());
   }
 
-  Future<void> _loadSettings() async {
-    final service = AppSettingsService();
-    final baseUrl = await service.loadJellyfinBaseUrl();
-    final apiKey = await service.loadJellyfinApiKey();
-    final pollingInterval = await service.loadPollingInterval();
-
-    setState(() {
-      _pollingIntervalController =
-          TextEditingController(text: pollingInterval.toString());
-      _baseUrlController = TextEditingController(text: baseUrl);
-      _apiKeyController = TextEditingController(text: apiKey);
-    });
+  @override
+  void dispose() {
+    _baseUrlController.dispose();
+    _apiKeyController.dispose();
+    _pollingIntervalController.dispose();
+    super.dispose();
   }
 
   Future<void> _saveSettings(
@@ -66,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
-                // spacing: 16,
+                spacing: 16,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Settings',
@@ -76,10 +76,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     controller: _baseUrlController,
                     decoration: const InputDecoration(
                       labelText: 'API Hostname',
-                      hintText: 'http://localhost:8096',
+                      hintText: 'i.e. http://localhost:8096',
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      var parsedUri = Uri.tryParse(_baseUrlController.text);
+                      if (value == null || value.isEmpty || (parsedUri != null && !parsedUri.isAbsolute)) {
                         return 'Please enter the Jellyfin hostname';
                       }
                       return null;
@@ -91,6 +92,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       labelText: 'API Key',
                       hintText: 'Your Jellyfin API Key',
                     ),
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        if (value.length < 32) {
+                          return 'The API key seems too short';
+                        } else if (value.length > 32) {
+                          return 'The API key seems too long';
+                        }
+                      }
+                      return null;
+                    },
                   ),
                   TextFormField(
                     controller: _pollingIntervalController,
@@ -100,6 +111,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter a polling interval';
+                      }
+                      var parsed = int.tryParse(value);
+                      if (parsed == null || parsed <= 0) {
+                        return 'Please enter a valid positive integer';
                       }
                       return null;
                     },
