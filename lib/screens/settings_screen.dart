@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
+import 'package:jellydash/theme/jellydash_theme.dart';
 import '../services/app_settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -69,9 +70,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 spacing: 16,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Settings',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Settings',
+                    style: JellydashTextStyles.sectionTitle,
+                  ),
                   TextFormField(
                     controller: _baseUrlController,
                     decoration: const InputDecoration(

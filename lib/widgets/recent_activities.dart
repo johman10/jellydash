@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jellydash/theme/jellydash_theme.dart';
 
 class RecentActivityCard extends StatelessWidget {
   const RecentActivityCard({super.key});
@@ -10,8 +11,10 @@ class RecentActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Recent Activities',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            'Recent Activities',
+            style: JellydashTextStyles.sectionTitle,
+          ),
         ],
       ),
     );

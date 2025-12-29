@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jellydash/screens/dashboard_screen.dart';
 import 'package:jellydash/services/jellyfin_api_service.dart';
+import 'package:jellydash/theme/jellydash_theme.dart';
 import 'screens/settings_screen.dart';
 import 'services/app_settings_service.dart';
 
@@ -81,7 +82,8 @@ class JellydashApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Jellydash',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme:
+            ColorScheme.fromSeed(seedColor: JellydashColors.primary),
         useMaterial3: true,
       ),
       darkTheme: ThemeData.dark(),

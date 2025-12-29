@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
+import 'package:jellydash/theme/jellydash_theme.dart';
 import '../types/session.dart';
 import './current_activity_card.dart';
 
@@ -76,8 +77,10 @@ class CurrentActivities extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 8,
         children: [
-          const Text('Current Activities',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const Text(
+            'Current Activities',
+            style: JellydashTextStyles.sectionTitle,
+          ),
           getContent(isLoading, sessions),
         ],
       ),

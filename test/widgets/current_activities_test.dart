@@ -42,7 +42,8 @@ void main() {
     testWidgets('renders one column on narrow width', (WidgetTester tester) async {
       final sessions = List.generate(3, (i) => buildSession('User$i'));
 
-      await tester.binding.setSurfaceSize(const Size(320, 640));
+      // Use a tall surface so the column has enough vertical space
+      await tester.binding.setSurfaceSize(const Size(320, 1200));
       await tester.pumpWidget(wrapWithMaterial(
         CurrentActivities(isLoading: false, sessions: sessions),
       ));

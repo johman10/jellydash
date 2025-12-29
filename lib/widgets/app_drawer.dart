@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:jellydash/theme/jellydash_theme.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -23,10 +24,12 @@ class AppDrawer extends StatelessWidget {
         children: <Widget>[
           const DrawerHeader(
             decoration: BoxDecoration(
-              color: Colors.deepPurple,
+              color: JellydashColors.drawerHeaderBackground,
             ),
-            child: Text('Jellydash Menu',
-                style: TextStyle(color: Colors.white, fontSize: 24)),
+            child: Text(
+              'Jellydash Menu',
+              style: JellydashTextStyles.appDrawerHeader,
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.dashboard),
