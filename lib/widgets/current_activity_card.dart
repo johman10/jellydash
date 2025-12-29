@@ -1,5 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:jellydash/theme/jellydash_theme.dart';
 import '../types/session.dart';
+
+const posterHeight = 75.0;
+const posterWidth = 50.0;
+
+class PosterFallback extends StatelessWidget {
+  const PosterFallback({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: posterWidth,
+      height: posterHeight,
+      color: JellydashColors.posterFallbackBackground,
+      child: const Icon(
+        Icons.movie,
+        size: 48,
+        color: JellydashColors.posterFallbackIcon,
+      ),
+    );
+  }
+}
+
+class UserImageFallback extends StatelessWidget {
+  final String userName;
+
+  const UserImageFallback({super.key, required this.userName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      userName.substring(0, 1).toUpperCase(),
+      style: JellydashTextStyles.userAvatarFallback,
+    );
+  }
+}
 
 class CurrentActivityCard extends StatelessWidget {
   final Session session;
@@ -35,6 +71,18 @@ class CurrentActivityCard extends StatelessWidget {
     return '$bps bps';
   }
 
+  get subtitle {
+    final season = session.season ?? 0;
+    final episode = session.episode ?? 0;
+    if (season > 0 && episode > 0) {
+       return 'S${season.toString()} · E${episode.toString()}';
+    } else if (session.year != null) {
+      return '${session.year}';
+    } else {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -44,17 +92,15 @@ class CurrentActivityCard extends StatelessWidget {
     final progress = session.progress;
     final duration = session.duration;
     final remaining = duration - progress;
-    final minutesLeft = remaining.isNegative ? 0 : remaining.inMinutes;
+    final clampedRemaining = remaining.isNegative ? Duration.zero : remaining;
+    final minutesLeft = clampedRemaining.inMinutes;
+    final endDateTime = DateTime.now().add(clampedRemaining);
+    final endTimeOfDay = TimeOfDay.fromDateTime(endDateTime);
     final userName = session.userName ?? 'Unknown';
     final deviceName = session.deviceName ?? 'Unknown Device';
     final client = session.client ?? '';
     final transcoding = session.transcodingInfo;
     final bitrate = session.bitrate ?? 0;
-    final season = session.season ?? 0;
-    final episode = session.episode ?? 0;
-
-    const posterHeight = 75.0;
-    const posterWidth = 50.0;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
@@ -71,34 +117,38 @@ class CurrentActivityCard extends StatelessWidget {
                 // Poster
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
-                  child: imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
+                  child: Stack(
+                    children: [
+                      imageUrl.isNotEmpty
+                          ? Image.network(
+                              imageUrl,
+                              width: posterWidth,
+                              height: posterHeight,
+                              fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const PosterFallback();
+                              },
+                              errorBuilder:
+                                  (context, error, stackTrace) =>
+                                      const PosterFallback(),
+                            )
+                          : const PosterFallback(),
+                      if (session.isPaused)
+                        Container(
                           width: posterWidth,
                           height: posterHeight,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(
-                            width: posterWidth,
-                            height: posterHeight,
-                            color: Colors.grey[800],
-                            child: const Icon(
-                              Icons.movie,
-                              size: 48,
-                              color: Colors.white54,
-                            ),
-                          ),
-                        )
-                      : Container(
-                          width: posterWidth,
-                          height: posterHeight,
-                          color: Colors.grey[800],
+                          color: JellydashColors.pausedOverlayBackground,
+                          alignment: Alignment.center,
                           child: const Icon(
-                            Icons.movie,
-                            size: 48,
-                            color: Colors.white54,
+                            Icons.pause_circle_filled,
+                            color: JellydashColors.pausedOverlayIcon,
+                            size: 32,
                           ),
                         ),
+                    ],
+                  ),
                 ),
                 // Main content
                 Expanded(
@@ -113,22 +163,13 @@ class CurrentActivityCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),
-                      if (season > 0 && episode > 0) ...[
-                        Text(
-                          'S${season.toString().padLeft(2, '0')} · E${episode.toString().padLeft(2, '0')}',
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(color: theme.hintColor),
-                        ),
-                      ],
-                      if (season == 0 && episode == 0 && session.year != null) ...[
-                        Text(
-                          '${session.year}',
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(color: theme.hintColor),
-                        ),
-                      ],
+                      !subtitle.isEmpty ? Text(
+                        subtitle,
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: theme.hintColor),
+                      ) : const SizedBox.shrink(),
                       Text(
-                        '$minutesLeft min left',
+                        '$minutesLeft min left (${endTimeOfDay.format(context)})',
                         style: theme.textTheme.bodyMedium
                             ?.copyWith(color: theme.hintColor),
                       )
@@ -155,8 +196,9 @@ class CurrentActivityCard extends StatelessWidget {
                     secondaryTrackValue:
                         (transcoding.progress / 100.0).clamp(0.0, 1.0),
                     onChanged: (double x) {},
-                    activeColor: Colors.purpleAccent,
-                    secondaryActiveColor: Colors.grey[600],
+                    activeColor: JellydashColors.sliderActive,
+                    secondaryActiveColor:
+                      JellydashColors.sliderSecondaryActive,
                   ),
                 ),
               ),
@@ -180,14 +222,13 @@ class CurrentActivityCard extends StatelessWidget {
                           width: 25,
                           height: 25,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Text(
-                              userName.substring(0, 1).toUpperCase(),
-                              style: const TextStyle(
-                                  fontSize: 16, color: Colors.white54)),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return UserImageFallback(userName: userName);
+                          },
+                          errorBuilder: (context, error, stackTrace) => UserImageFallback(userName: userName),
                         )
-                      : Text(userName.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(
-                              fontSize: 16, color: Colors.white54)),
+                      : UserImageFallback(userName: userName),
                 ),
                 Expanded(
                   child: Column(
@@ -224,7 +265,8 @@ class CurrentActivityCard extends StatelessWidget {
                               width: 20,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
-                                color: Colors.green,
+                                color: JellydashColors
+                                    .transcodingBadgeBackground,
                               ),
                               alignment: Alignment.center,
                               child: const Text('V'),
@@ -236,7 +278,8 @@ class CurrentActivityCard extends StatelessWidget {
                               width: 20,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
-                                color: Colors.blue,
+                                color: JellydashColors
+                                    .transcodingBadgeBackground,
                               ),
                               alignment: Alignment.center,
                               child: const Text('A'),

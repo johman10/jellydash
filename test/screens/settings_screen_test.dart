@@ -4,74 +4,88 @@ import 'package:jellydash/screens/settings_screen.dart';
 import 'package:jellydash/services/app_settings_service.dart';
 
 void main() {
+  Widget wrapSettings(AppSettings settings) {
+    return MaterialApp(home: SettingsScreen(appSettings: settings));
+  }
+
+  AppSettings baseSettings({
+    String jellyfinBaseUrl = 'http://localhost:8096',
+    String jellyfinApiKey = '',
+    int pollingInterval = 10,
+  }) {
+    return AppSettings(
+      jellyfinBaseUrl: jellyfinBaseUrl,
+      jellyfinApiKey: jellyfinApiKey,
+      pollingInterval: pollingInterval,
+    );
+  }
+
   group('SettingsScreen', () {
-    testWidgets('shows API Hostname field', (WidgetTester tester) async {
-      final dummySettings = AppSettings(
-        jellyfinBaseUrl: 'http://localhost:8097',
-        jellyfinApiKey: '',
-        pollingInterval: 10,
-      );
-      await tester.pumpWidget(
-          MaterialApp(home: SettingsScreen(appSettings: dummySettings)));
-      expect(
-          find.widgetWithText(TextFormField, 'API Hostname'), findsOneWidget);
+    testWidgets('shows API Hostname field', (tester) async {
+      final settings = baseSettings(jellyfinBaseUrl: 'http://localhost:8097');
+
+      await tester.pumpWidget(wrapSettings(settings));
+
+      expect(find.widgetWithText(TextFormField, 'API Hostname'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'i.e. http://localhost:8096'),
           findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'http://localhost:8097'),
           findsOneWidget);
     });
 
-    testWidgets('shows API Key field', (WidgetTester tester) async {
-      final dummySettings = AppSettings(
+    testWidgets('shows API Key field', (tester) async {
+      final settings = baseSettings(
         jellyfinBaseUrl: 'http://localhost:8096',
         jellyfinApiKey: '1234567890abcdef1234567890abcdef',
-        pollingInterval: 10,
       );
-      await tester.pumpWidget(
-          MaterialApp(home: SettingsScreen(appSettings: dummySettings)));
+
+      await tester.pumpWidget(wrapSettings(settings));
+
       expect(find.widgetWithText(TextFormField, 'API Key'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'Your Jellyfin API Key'),
           findsOneWidget);
       expect(
-          find.widgetWithText(
-              TextFormField, '1234567890abcdef1234567890abcdef'),
-          findsOneWidget);
+        find.widgetWithText(
+          TextFormField,
+          '1234567890abcdef1234567890abcdef',
+        ),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('shows Polling Interval field', (WidgetTester tester) async {
-      final dummySettings = AppSettings(
-        jellyfinBaseUrl: 'http://localhost:8096',
-        jellyfinApiKey: '',
-        pollingInterval: 10,
-      );
-      await tester.pumpWidget(
-          MaterialApp(home: SettingsScreen(appSettings: dummySettings)));
+    testWidgets('shows Polling Interval field', (tester) async {
+      final settings = baseSettings(pollingInterval: 10);
+
+      await tester.pumpWidget(wrapSettings(settings));
+
       expect(find.widgetWithText(TextFormField, 'Polling Interval'),
           findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'In seconds'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, '10'), findsOneWidget);
     });
 
-    testWidgets('can fill and save form', (WidgetTester tester) async {
-      final dummySettings = AppSettings(
-        jellyfinBaseUrl: 'http://localhost:8096',
-        jellyfinApiKey: '',
-        pollingInterval: 10,
-      );
-      await tester.pumpWidget(
-          MaterialApp(home: SettingsScreen(appSettings: dummySettings)));
-      // Enter values
-      await tester.enterText(find.widgetWithText(TextFormField, 'API Hostname'),
-          'http://test:8090');
-      await tester.enterText(find.widgetWithText(TextFormField, 'API Key'),
-          '1234567890abcdef1234567890abcdef');
+    testWidgets('can fill and save form', (tester) async {
+      final settings = baseSettings();
+
+      await tester.pumpWidget(wrapSettings(settings));
+
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Polling Interval'), '15');
-      // Tap save
+        find.widgetWithText(TextFormField, 'API Hostname'),
+        'http://test:8090',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'API Key'),
+        '1234567890abcdef1234567890abcdef',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Polling Interval'),
+        '15',
+      );
+
       await tester.pump();
       await tester.tap(find.byIcon(Icons.save));
       await tester.pump();
-      // Should show a SnackBar
+
       expect(find.text('Settings saved'), findsOneWidget);
     });
   });

@@ -1,16 +1,80 @@
-# jellydash
+# Jellydash
 
-A new Flutter project.
+Jellydash is a lightweight dashboard for [Jellyfin](https://jellyfin.org/) that shows a
+real‑time view of who is watching what on your server. It is designed to be a quick,
+glanceable overview of current and recent activity, suitable for always‑on displays,
+desktop, tablet, and mobile.
+
+## Features
+
+- Live list of active Jellyfin sessions with per‑user cards.
+- Shows title, season/episode or year, remaining time, and estimated completion time.
+- Visual indicators for transcoding (separate video/audio badges) and stream bitrate.
+- User avatar circle with fallback to user initial when no image is available.
+- Responsive layout that adapts card columns to available width.
+- Light and dark themes using standard Flutter theming.
+
+## How It Works
+
+Jellydash talks directly to your Jellyfin server using its public HTTP API. The Flutter
+app fetches session information from Jellyfin, maps it into `Session` models, and
+renders them using widgets such as `CurrentActivities` and `CurrentActivityCard`.
+There is no extra backend; all logic runs client‑side.
+
+## Prerequisites
+
+To build and run Jellydash you need:
+
+- A running Jellyfin server you can reach over HTTP/HTTPS.
+- Flutter SDK (3.x or newer) installed and on your `PATH`.
+- A device or emulator (web, mobile, or desktop) supported by Flutter.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+1. **Clone the repository**
 
-A few resources to get you started if this is your first Flutter project:
+	```bash
+	git clone https://github.com/johman10/jellydash.git
+	cd jellydash
+	```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+2. **Fetch dependencies**
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+	```bash
+	flutter pub get
+	```
+
+3. **Run the app** (choose one target):
+
+	```bash
+	# Web
+	flutter run -d chrome
+
+	# MacOS / Windows / Linux (desktop)
+	flutter run -d macos
+
+	# Mobile
+	flutter run
+	```
+
+4. **Configure Jellyfin connection**
+
+	- Open the **Settings** screen from the app drawer.
+	- Enter your Jellyfin base URL (for example, `https://jellyfin.example.com`).
+	- Provide any required API key or authentication details as prompted.
+	- Save settings; the dashboard will begin loading active sessions.
+
+## Development
+
+- Run all tests:
+
+  ```bash
+  flutter test
+  ```
+
+- Key widgets to be aware of:
+  - `lib/widgets/current_activities.dart` – responsive layout of activity cards.
+  - `lib/widgets/current_activity_card.dart` – individual session card UI.
+
+When adding new features, prefer small, focused widgets and add matching tests in the
+`test/widgets` directory to cover layout and key text/indicator behaviour.

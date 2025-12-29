@@ -11,6 +11,52 @@ import 'dashboard_screen_test.mocks.dart';
 
 @GenerateMocks([JellyfinApiService])
 void main() {
+  Widget wrapDashboard(MockJellyfinApiService apiService,
+      {int pollingInterval = 1}) {
+    return MaterialApp(
+      home: DashboardScreen(
+        apiService: apiService,
+        pollingInterval: pollingInterval,
+      ),
+    );
+  }
+
+  Session baseSession({
+    String? name,
+    int? season,
+    int? episode,
+    int? year,
+    Duration? progress,
+    Duration? duration,
+    int? bitrate,
+    TranscodingInfo? transcodingInfo,
+    String? userName,
+    String? userImageUrl,
+    String? imageUrl,
+    bool isPaused = false,
+  }) {
+    return Session(
+      userName: userName ?? 'User',
+      client: 'Web',
+      deviceName: 'Device',
+      name: name ?? 'Title',
+      season: season,
+      episode: episode,
+      year: year,
+      imageUrl: imageUrl ?? '',
+      video: SessionVideo(),
+      audio: SessionAudio(),
+      subtitles: SessionSubtitle(),
+      transcodingInfo: transcodingInfo ??
+          TranscodingInfo(video: SessionVideo(), audio: SessionAudio(), reasons: []),
+      progress: progress ?? const Duration(minutes: 1),
+      duration: duration ?? const Duration(minutes: 10),
+      bitrate: bitrate,
+      userImageUrl: userImageUrl,
+      isPaused: isPaused,
+    );
+  }
+
   group('DashboardScreen', () {
     late MockJellyfinApiService mockApiService;
 
@@ -22,258 +68,160 @@ void main() {
       reset(mockApiService);
     });
 
-    testWidgets('renders without error', (WidgetTester tester) async {
+    testWidgets('renders without error', (tester) async {
       when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
-            Session(
+            baseSession(
               userName: 'TestUser',
-              client: 'Web',
-              deviceName: 'TestDevice',
               name: 'Test Series',
               season: 1,
               episode: 2,
               year: 2022,
               imageUrl: '/Items/12345/Images/Primary',
-              video: SessionVideo(),
-              audio: SessionAudio(),
-              subtitles: SessionSubtitle(),
-              transcodingInfo: TranscodingInfo(
-                  video: SessionVideo(), audio: SessionAudio(), reasons: []),
               progress: const Duration(minutes: 45),
               duration: const Duration(minutes: 60),
-              isPlaying: true,
-              isPaused: false,
-              isMuted: false,
-            )
+            ),
           ]);
-      const pollingInterval = 1;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: DashboardScreen(
-            apiService: mockApiService,
-            pollingInterval: pollingInterval,
-          ),
-        ),
-      );
+
+      await tester.pumpWidget(wrapDashboard(mockApiService));
+
       expect(find.byType(DashboardScreen), findsOneWidget);
     });
 
-    testWidgets('shows loading indicator and activities',
-        (WidgetTester tester) async {
+    testWidgets('shows loading indicator and activities', (tester) async {
       when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
-            Session(
+            baseSession(
               userName: 'TestUser',
-              client: 'Web',
-              deviceName: 'TestDevice',
               name: 'Test Series',
               season: 1,
               episode: 2,
               year: 2022,
               imageUrl: '/Items/12345/Images/Primary',
-              video: SessionVideo(),
-              audio: SessionAudio(),
-              subtitles: SessionSubtitle(),
-              transcodingInfo: TranscodingInfo(
-                  video: SessionVideo(), audio: SessionAudio(), reasons: []),
               progress: const Duration(minutes: 45),
               duration: const Duration(minutes: 60),
-              isPlaying: true,
-              isPaused: false,
-              isMuted: false,
-            )
+            ),
           ]);
-      const pollingInterval = 1;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: DashboardScreen(
-            apiService: mockApiService,
-            pollingInterval: pollingInterval,
-          ),
-        ),
-      );
-      // Should show a loading indicator initially
+
+      await tester.pumpWidget(wrapDashboard(mockApiService));
+
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       await tester.pump();
       expect(find.byType(CurrentActivities), findsOneWidget);
     });
 
-    testWidgets('shows updated sessions when they change', (WidgetTester tester) async {
+    testWidgets('shows updated sessions when they change', (tester) async {
+      const pollingInterval = 1;
+
       when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
-            Session(
+            baseSession(
               userName: 'User1',
               name: 'Show1',
               season: 1,
               episode: 1,
-              video: SessionVideo(),
-              audio: SessionAudio(),
-              subtitles: SessionSubtitle(),
-              transcodingInfo: TranscodingInfo(
-                  video: SessionVideo(), audio: SessionAudio(), reasons: []),
               progress: const Duration(minutes: 1),
               duration: const Duration(minutes: 10),
-            )
+            ),
           ]);
-      const pollingInterval = 1;
+
       await tester.pumpWidget(
-        MaterialApp(
-          home: DashboardScreen(
-            apiService: mockApiService,
-            pollingInterval: pollingInterval,
-          ),
+        wrapDashboard(
+          mockApiService,
+          pollingInterval: pollingInterval,
         ),
       );
+
       await tester.pumpAndSettle();
       expect(find.textContaining('User1'), findsOneWidget);
-      // Update the mock to return a different session
+
       when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
-            Session(
+            baseSession(
               userName: 'User2',
               name: 'Show2',
               season: 2,
               episode: 2,
-              video: SessionVideo(),
-              audio: SessionAudio(),
-              subtitles: SessionSubtitle(),
-              transcodingInfo: TranscodingInfo(
-                  video: SessionVideo(), audio: SessionAudio(), reasons: []),
               progress: const Duration(minutes: 9),
               duration: const Duration(minutes: 10),
-            )
+            ),
           ]);
-      // Wait for the polling interval to trigger an update
+
       await tester.pump(const Duration(seconds: pollingInterval + 1));
       await tester.pumpAndSettle();
+
       expect(find.textContaining('User2'), findsOneWidget);
       expect(find.textContaining('User1'), findsNothing);
     });
 
-    testWidgets('shows RecentActivities', (WidgetTester tester) async {
+    testWidgets('shows RecentActivities', (tester) async {
       when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
-            Session(
+            baseSession(
               userName: 'TestUser',
-              client: 'Web',
-              deviceName: 'TestDevice',
               name: 'Test Series',
               season: 1,
               episode: 2,
               year: 2022,
               imageUrl: '/Items/12345/Images/Primary',
-              video: SessionVideo(),
-              audio: SessionAudio(),
-              subtitles: SessionSubtitle(),
-              transcodingInfo: TranscodingInfo(
-                  video: SessionVideo(), audio: SessionAudio(), reasons: []),
               progress: const Duration(minutes: 45),
               duration: const Duration(minutes: 60),
-              isPlaying: true,
-              isPaused: false,
-              isMuted: false,
-            )
+            ),
           ]);
-      const pollingInterval = 1;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: DashboardScreen(
-            apiService: mockApiService,
-            pollingInterval: pollingInterval,
-          ),
-        ),
-      );
+
+      await tester.pumpWidget(wrapDashboard(mockApiService));
+
       expect(find.text('Recent Activities'), findsOneWidget);
     });
 
-    testWidgets('shows CurrentActivities with mock session',
-        (WidgetTester tester) async {
+    testWidgets('shows CurrentActivities with mock session', (tester) async {
       when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
-            Session(
+            baseSession(
               userName: 'TestUser',
-              client: 'Web',
-              deviceName: 'TestDevice',
               name: 'Test Series',
               season: 1,
               episode: 2,
               year: 2022,
               imageUrl: '/Items/12345/Images/Primary',
-              video: SessionVideo(),
-              audio: SessionAudio(),
-              subtitles: SessionSubtitle(),
-              transcodingInfo: TranscodingInfo(
-                  video: SessionVideo(), audio: SessionAudio(), reasons: []),
               progress: const Duration(minutes: 45),
               duration: const Duration(minutes: 60),
-              isPlaying: true,
-              isPaused: false,
-              isMuted: false,
-            )
+            ),
           ]);
-      const pollingInterval = 1;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: DashboardScreen(
-            apiService: mockApiService,
-            pollingInterval: pollingInterval,
-          ),
-        ),
-      );
+
+      await tester.pumpWidget(wrapDashboard(mockApiService));
       await tester.pumpAndSettle();
+
       expect(find.textContaining('TestUser'), findsOneWidget);
       expect(find.textContaining('Test Series'), findsOneWidget);
     });
 
-    testWidgets('shows no activities when session list is empty',
-        (WidgetTester tester) async {
+    testWidgets('shows no activities when session list is empty', (tester) async {
       when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => []);
-      const pollingInterval = 1;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: DashboardScreen(
-            apiService: mockApiService,
-            pollingInterval: pollingInterval,
-          ),
-        ),
-      );
+
+      await tester.pumpWidget(wrapDashboard(mockApiService));
       await tester.pumpAndSettle();
+
       expect(find.text('No current activities.'), findsOneWidget);
     });
 
-    testWidgets('shows multiple sessions', (WidgetTester tester) async {
+    testWidgets('shows multiple sessions', (tester) async {
       when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
-            Session(
+            baseSession(
               userName: 'User1',
               name: 'Show1',
               season: 1,
               episode: 1,
-              video: SessionVideo(),
-              audio: SessionAudio(),
-              subtitles: SessionSubtitle(),
-              transcodingInfo: TranscodingInfo(
-                  video: SessionVideo(), audio: SessionAudio(), reasons: []),
               progress: const Duration(minutes: 1),
               duration: const Duration(minutes: 10),
             ),
-            Session(
+            baseSession(
               userName: 'User2',
               name: 'Show2',
               season: 2,
               episode: 2,
-              video: SessionVideo(),
-              audio: SessionAudio(),
-              subtitles: SessionSubtitle(),
-              transcodingInfo: TranscodingInfo(
-                  video: SessionVideo(), audio: SessionAudio(), reasons: []),
               progress: const Duration(minutes: 9),
               duration: const Duration(minutes: 10),
             ),
           ]);
-      const pollingInterval = 1;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: DashboardScreen(
-            apiService: mockApiService,
-            pollingInterval: pollingInterval,
-          ),
-        ),
-      );
+
+      await tester.pumpWidget(wrapDashboard(mockApiService));
       await tester.pumpAndSettle();
+
       expect(find.textContaining('User1'), findsOneWidget);
       expect(find.textContaining('User2'), findsOneWidget);
     });
