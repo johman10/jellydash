@@ -16,7 +16,7 @@ class JellyfinApiService {
     if (response.statusCode == 200) {
       var parsedResponse = jsonDecode(response.body) as List<dynamic>;
       return parsedResponse
-          .map((sessionJson) => Session.fromJson(sessionJson))
+          .map((sessionJson) => Session.fromJson(baseUrl, sessionJson))
           .where((session) => session.isPlaying)
           .toList();
     } else {

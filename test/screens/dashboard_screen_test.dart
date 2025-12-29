@@ -32,13 +32,14 @@ void main() {
               season: 1,
               episode: 2,
               year: 2022,
-              imagePath: '/Items/12345/Images/Primary',
+              imageUrl: '/Items/12345/Images/Primary',
               video: SessionVideo(),
               audio: SessionAudio(),
               subtitles: SessionSubtitle(),
               transcodingInfo: TranscodingInfo(
                   video: SessionVideo(), audio: SessionAudio(), reasons: []),
-              progress: 75.0,
+              progress: const Duration(minutes: 45),
+              duration: const Duration(minutes: 60),
               isPlaying: true,
               isPaused: false,
               isMuted: false,
@@ -67,13 +68,14 @@ void main() {
               season: 1,
               episode: 2,
               year: 2022,
-              imagePath: '/Items/12345/Images/Primary',
+              imageUrl: '/Items/12345/Images/Primary',
               video: SessionVideo(),
               audio: SessionAudio(),
               subtitles: SessionSubtitle(),
               transcodingInfo: TranscodingInfo(
                   video: SessionVideo(), audio: SessionAudio(), reasons: []),
-              progress: 75.0,
+              progress: const Duration(minutes: 45),
+              duration: const Duration(minutes: 60),
               isPlaying: true,
               isPaused: false,
               isMuted: false,
@@ -106,7 +108,8 @@ void main() {
               subtitles: SessionSubtitle(),
               transcodingInfo: TranscodingInfo(
                   video: SessionVideo(), audio: SessionAudio(), reasons: []),
-              progress: 0.1,
+              progress: const Duration(minutes: 1),
+              duration: const Duration(minutes: 10),
             )
           ]);
       const pollingInterval = 1;
@@ -132,7 +135,8 @@ void main() {
               subtitles: SessionSubtitle(),
               transcodingInfo: TranscodingInfo(
                   video: SessionVideo(), audio: SessionAudio(), reasons: []),
-              progress: 0.9,
+              progress: const Duration(minutes: 9),
+              duration: const Duration(minutes: 10),
             )
           ]);
       // Wait for the polling interval to trigger an update
@@ -142,7 +146,7 @@ void main() {
       expect(find.textContaining('User1'), findsNothing);
     });
 
-    testWidgets('shows RecentActivityCard', (WidgetTester tester) async {
+    testWidgets('shows RecentActivities', (WidgetTester tester) async {
       when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
             Session(
               userName: 'TestUser',
@@ -152,13 +156,14 @@ void main() {
               season: 1,
               episode: 2,
               year: 2022,
-              imagePath: '/Items/12345/Images/Primary',
+              imageUrl: '/Items/12345/Images/Primary',
               video: SessionVideo(),
               audio: SessionAudio(),
               subtitles: SessionSubtitle(),
               transcodingInfo: TranscodingInfo(
                   video: SessionVideo(), audio: SessionAudio(), reasons: []),
-              progress: 75.0,
+              progress: const Duration(minutes: 45),
+              duration: const Duration(minutes: 60),
               isPlaying: true,
               isPaused: false,
               isMuted: false,
@@ -173,7 +178,7 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Recent Activity'), findsOneWidget);
+      expect(find.text('Recent Activities'), findsOneWidget);
     });
 
     testWidgets('shows CurrentActivities with mock session',
@@ -187,13 +192,14 @@ void main() {
               season: 1,
               episode: 2,
               year: 2022,
-              imagePath: '/Items/12345/Images/Primary',
+              imageUrl: '/Items/12345/Images/Primary',
               video: SessionVideo(),
               audio: SessionAudio(),
               subtitles: SessionSubtitle(),
               transcodingInfo: TranscodingInfo(
                   video: SessionVideo(), audio: SessionAudio(), reasons: []),
-              progress: 75.0,
+              progress: const Duration(minutes: 45),
+              duration: const Duration(minutes: 60),
               isPlaying: true,
               isPaused: false,
               isMuted: false,
@@ -241,7 +247,8 @@ void main() {
               subtitles: SessionSubtitle(),
               transcodingInfo: TranscodingInfo(
                   video: SessionVideo(), audio: SessionAudio(), reasons: []),
-              progress: 0.1,
+              progress: const Duration(minutes: 1),
+              duration: const Duration(minutes: 10),
             ),
             Session(
               userName: 'User2',
@@ -253,7 +260,8 @@ void main() {
               subtitles: SessionSubtitle(),
               transcodingInfo: TranscodingInfo(
                   video: SessionVideo(), audio: SessionAudio(), reasons: []),
-              progress: 0.9,
+              progress: const Duration(minutes: 9),
+              duration: const Duration(minutes: 10),
             ),
           ]);
       const pollingInterval = 1;

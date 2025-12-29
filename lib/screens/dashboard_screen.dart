@@ -4,7 +4,7 @@ import 'package:jellydash/types/session.dart';
 import 'dart:async';
 import '../services/jellyfin_api_service.dart';
 import '../widgets/current_activities.dart';
-import '../widgets/recent_activity_card.dart';
+import '../widgets/recent_activities.dart';
 
 class DashboardScreen extends StatefulWidget {
   final JellyfinApiService apiService;
@@ -49,6 +49,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // In case of an error add the appropriate state.
     // Then show instructions to verify the configuration with a button to settings.
     widget.apiService.fetchCurrentSessions().then((data) {
+      data.sort((a, b) {
+        final aDateCreated = a.dateCreated;
+        final bDateCreated = b.dateCreated;
+        if (aDateCreated == null && bDateCreated == null) {
+          return 0;
+        }
+        if (aDateCreated == null) {
+          // Sessions without a creation date are shown after those with one.
+          return 1;
+        }
+        if (bDateCreated == null) {
+          return -1;
+        }
+        return bDateCreated.compareTo(aDateCreated);
+      });
       setState(() {
         _sessions = data;
         _initialLoading = false;
