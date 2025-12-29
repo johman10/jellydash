@@ -1,6 +1,6 @@
 {
-    "name": "jellydash_app",
-    "short_name": "jellydash_app",
+    "name": "jellydash",
+    "short_name": "jellydash",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
