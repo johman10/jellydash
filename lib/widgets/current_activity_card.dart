@@ -266,7 +266,7 @@ class CurrentActivityCard extends StatelessWidget {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
                                 color: JellydashColors
-                                    .transcodingBadgeBackground,
+                                    .transcodingBadgeBackground(context),
                               ),
                               alignment: Alignment.center,
                               child: const Text('V'),
@@ -279,7 +279,7 @@ class CurrentActivityCard extends StatelessWidget {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(4),
                                 color: JellydashColors
-                                    .transcodingBadgeBackground,
+                                    .transcodingBadgeBackground(context),
                               ),
                               alignment: Alignment.center,
                               child: const Text('A'),
