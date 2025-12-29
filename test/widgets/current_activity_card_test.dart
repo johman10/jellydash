@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/types/session.dart';
 import 'package:jellydash/widgets/current_activity_card.dart';
+import 'package:jellydash/theme/jellydash_theme.dart';
 
 void main() {
   Widget wrap(Widget child) {
@@ -169,7 +170,7 @@ void main() {
 
       await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
 
-      expect(find.byType(UserImageFallback), findsOneWidget);
+      expect(find.text('A'), findsOneWidget);
     });
 
     testWidgets('uses PosterFallback when no imageUrl', (tester) async {
@@ -177,7 +178,12 @@ void main() {
 
       await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
 
-      expect(find.byType(PosterFallback), findsOneWidget);
+      final iconFinder = find.byIcon(Icons.movie);
+      expect(iconFinder, findsOneWidget);
+
+      final icon = tester.widget<Icon>(iconFinder);
+      expect(icon.size, 48);
+      expect(icon.color, JellydashColors.posterFallbackIcon);
     });
   });
 
