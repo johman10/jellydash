@@ -16,7 +16,10 @@ class JellydashColors {
   static const Color sliderActive = Colors.purpleAccent;
   static final Color sliderSecondaryActive = Colors.grey.shade700;
 
-  static final Color transcodingBadgeBackground = Colors.grey.shade700;
+  static Color transcodingBadgeBackground(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return colorScheme.secondaryContainer;
+  }
 }
 
 class JellydashTextStyles {
