@@ -247,7 +247,7 @@ class Session {
       deviceName: json['DeviceName'] as String?,
       season: json['NowPlayingItem']?['ParentIndexNumber'] as int?,
       episode: json['NowPlayingItem']?['IndexNumber'] as int?,
-      name: json['NowPlayingItem']?['SeriesName'] as String?,
+      name: json['NowPlayingItem']?['SeriesName'] ?? json['NowPlayingItem']?['Name'] as String?,
       year: json['NowPlayingItem']?['ProductionYear'] as int?,
       genre: json['NowPlayingItem']?['Genres'] != null &&
               (json['NowPlayingItem']['Genres'] as List).isNotEmpty

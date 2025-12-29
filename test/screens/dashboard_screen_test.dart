@@ -140,7 +140,7 @@ void main() {
             )
           ]);
       // Wait for the polling interval to trigger an update
-      await tester.pump(Duration(seconds: pollingInterval + 1));
+      await tester.pump(const Duration(seconds: pollingInterval + 1));
       await tester.pumpAndSettle();
       expect(find.textContaining('User2'), findsOneWidget);
       expect(find.textContaining('User1'), findsNothing);

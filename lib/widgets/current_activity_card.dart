@@ -113,11 +113,20 @@ class CurrentActivityCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),
-                      Text(
-                        'S${season.toString().padLeft(2, '0')} · E${episode.toString().padLeft(2, '0')}',
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(color: theme.hintColor),
-                      ),
+                      if (season > 0 && episode > 0) ...[
+                        Text(
+                          'S${season.toString().padLeft(2, '0')} · E${episode.toString().padLeft(2, '0')}',
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: theme.hintColor),
+                        ),
+                      ],
+                      if (season == 0 && episode == 0 && session.year != null) ...[
+                        Text(
+                          '${session.year}',
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: theme.hintColor),
+                        ),
+                      ],
                       Text(
                         '$minutesLeft min left',
                         style: theme.textTheme.bodyMedium

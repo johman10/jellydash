@@ -5,7 +5,7 @@ import 'package:jellydash/widgets/current_activities.dart';
 
 void main() {
   group('CurrentActivities layout', () {
-    Widget _wrapWithMaterial(Widget child) {
+    Widget wrapWithMaterial(Widget child) {
       return MaterialApp(
         home: Scaffold(
           body: Center(child: child),
@@ -13,7 +13,7 @@ void main() {
       );
     }
 
-    Session _buildSession(String userName) {
+    Session buildSession(String userName) {
       return Session(
         userName: userName,
         client: 'Web',
@@ -32,7 +32,7 @@ void main() {
     }
 
     testWidgets('shows message when no sessions', (WidgetTester tester) async {
-      await tester.pumpWidget(_wrapWithMaterial(
+      await tester.pumpWidget(wrapWithMaterial(
         const CurrentActivities(isLoading: false, sessions: []),
       ));
 
@@ -40,10 +40,10 @@ void main() {
     });
 
     testWidgets('renders one column on narrow width', (WidgetTester tester) async {
-      final sessions = List.generate(3, (i) => _buildSession('User$i'));
+      final sessions = List.generate(3, (i) => buildSession('User$i'));
 
       await tester.binding.setSurfaceSize(const Size(320, 640));
-      await tester.pumpWidget(_wrapWithMaterial(
+      await tester.pumpWidget(wrapWithMaterial(
         CurrentActivities(isLoading: false, sessions: sessions),
       ));
 
@@ -54,10 +54,10 @@ void main() {
     });
 
     testWidgets('renders multiple sessions without overflow', (WidgetTester tester) async {
-      final sessions = List.generate(6, (i) => _buildSession('User$i'));
+      final sessions = List.generate(6, (i) => buildSession('User$i'));
 
       await tester.binding.setSurfaceSize(const Size(1200, 800));
-      await tester.pumpWidget(_wrapWithMaterial(
+      await tester.pumpWidget(wrapWithMaterial(
         CurrentActivities(isLoading: false, sessions: sessions),
       ));
 
