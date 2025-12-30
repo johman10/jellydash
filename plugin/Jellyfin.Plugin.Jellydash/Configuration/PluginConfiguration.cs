@@ -1,6 +1,6 @@
 using MediaBrowser.Model.Plugins;
 
-namespace Jellydash.Configuration;
+namespace Jellyfin.Plugin.Jellydash.Configuration;
 
 /// <summary>
 /// The configuration options.

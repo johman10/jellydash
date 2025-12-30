@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Jellydash.Configuration;
+using Jellyfin.Plugin.Jellydash.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
-namespace Jellydash;
+namespace Jellyfin.Plugin.Jellydash;
 
 /// <summary>
 /// The main plugin.
@@ -29,7 +29,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public override string Name => "Jellydash";
 
     /// <inheritdoc />
-    public override Guid Id => Guid.Parse("5cb64d09-c9e0-4d8e-b3b0-6c1088a32cf3");
+    public override Guid Id => Guid.Parse("02560995-4de6-45c3-9f4f-47061951af29");
 
     /// <summary>
     /// Gets the current plugin instance.

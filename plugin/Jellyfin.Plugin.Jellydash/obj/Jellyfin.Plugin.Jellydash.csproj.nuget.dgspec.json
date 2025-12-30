@@ -1,0 +1,95 @@
+{
+  "format": 1,
+  "restore": {
+    "/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/Jellyfin.Plugin.Jellydash.csproj": {}
+  },
+  "projects": {
+    "/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/Jellyfin.Plugin.Jellydash.csproj": {
+      "version": "11.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/Jellyfin.Plugin.Jellydash.csproj",
+        "projectName": "Jellyfin.Plugin.Jellydash",
+        "projectPath": "/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/Jellyfin.Plugin.Jellydash.csproj",
+        "packagesPath": "/Users/jvaneck/.nuget/packages/",
+        "outputPath": "/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/Users/jvaneck/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "Jellyfin.Controller": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "target": "Package",
+              "version": "[10.9.11, )"
+            },
+            "Jellyfin.Model": {
+              "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "target": "Package",
+              "version": "[10.9.11, )"
+            },
+            "SerilogAnalyzer": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[0.15.0, )"
+            },
+            "SmartAnalyzers.MultithreadingAnalyzer": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[1.1.31, )"
+            },
+            "StyleCop.Analyzers": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[1.2.0-beta.556, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/Users/jvaneck/.asdf/installs/dotnet/9.0.308/sdk/9.0.308/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

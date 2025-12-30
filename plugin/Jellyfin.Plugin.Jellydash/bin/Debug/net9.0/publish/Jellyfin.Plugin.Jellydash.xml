@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Jellyfin.Plugin.Jellydash</name>
+    </assembly>
+    <members>
+        <member name="T:Jellyfin.Plugin.Jellydash.Configuration.SomeOptions">
+            <summary>
+            The configuration options.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Plugin.Jellydash.Configuration.SomeOptions.OneOption">
+            <summary>
+            Option one.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Plugin.Jellydash.Configuration.SomeOptions.AnotherOption">
+            <summary>
+            Second option.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration">
+            <summary>
+            Plugin configuration.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration"/> class.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.TrueFalseSetting">
+            <summary>
+            Gets or sets a value indicating whether some true or false setting is enabled..
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.AnInteger">
+            <summary>
+            Gets or sets an integer setting.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.AString">
+            <summary>
+            Gets or sets a string setting.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.Options">
+            <summary>
+            Gets or sets an enum option.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Jellydash.Controllers.JellydashController">
+            <summary>
+            Simple controller exposing a health-check style ping endpoint.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Controllers.JellydashController.Ping">
+            <summary>
+            Returns a simple pong response to verify the plugin API is reachable.
+            </summary>
+            <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> with the string "pong".</returns>
+        </member>
+        <member name="T:Jellyfin.Plugin.Jellydash.Plugin">
+            <summary>
+            The main plugin.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Plugin.#ctor(MediaBrowser.Common.Configuration.IApplicationPaths,MediaBrowser.Model.Serialization.IXmlSerializer)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Jellydash.Plugin"/> class.
+            </summary>
+            <param name="applicationPaths">Instance of the <see cref="T:MediaBrowser.Common.Configuration.IApplicationPaths"/> interface.</param>
+            <param name="xmlSerializer">Instance of the <see cref="T:MediaBrowser.Model.Serialization.IXmlSerializer"/> interface.</param>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Plugin.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Plugin.Id">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Plugin.Instance">
+            <summary>
+            Gets the current plugin instance.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Plugin.GetPages">
+            <inheritdoc />
+        </member>
+    </members>
+</doc>
