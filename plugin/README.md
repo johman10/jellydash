@@ -49,6 +49,16 @@ Configuration lives in `.vscode/settings.json` and `.vscode/tasks.json`:
 
 The Flutter dashboard can then be pointed at this local Jellyfin instance (including the Jellydash plugin endpoints) for end‑to‑end development.
 
+## Running tests
+
+To run the plugin unit tests, run:
+
+```bash
+dotnet test Jellyfin.Plugin.Jellydash.sln
+```
+
+This will build the plugin and execute the `Jellyfin.Plugin.Jellydash.Tests` xUnit test project.
+
 ## Architecture Overview
 
 High‑level pieces:

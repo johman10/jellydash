@@ -20,10 +20,28 @@ public sealed class HistoryRepository
 
     private static bool _initialized;
 
+    /// <summary>
+    /// Gets or sets an optional override for the database path, primarily intended for tests.
+    /// When set, this path is used instead of the Jellyfin data directory.
+    /// </summary>
+    public static string? DatabasePathOverride { get; set; }
+
     private static string DatabasePath
     {
         get
         {
+            var overridePath = DatabasePathOverride;
+            if (!string.IsNullOrEmpty(overridePath))
+            {
+                var overrideDir = Path.GetDirectoryName(overridePath);
+                if (!string.IsNullOrEmpty(overrideDir))
+                {
+                    Directory.CreateDirectory(overrideDir);
+                }
+
+                return overridePath;
+            }
+
             var plugin = Plugin.Instance;
             if (plugin is null)
             {
