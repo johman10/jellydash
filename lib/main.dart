@@ -9,12 +9,9 @@ import 'services/app_settings_service.dart';
 
 final appSettingsService = AppSettingsService();
 
-void main() async {
-  await dotenv.load(
-    fileName: ".env",
-  );
-
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: "assets/env/.env", isOptional: true);
   await appSettingsService.init();
   runApp(const JellydashApp());
 }

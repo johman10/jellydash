@@ -19,12 +19,27 @@ public sealed class HistoryRepository
     private static readonly IReadOnlyList<(int Version, string Path)> MigrationScripts = LoadMigrationScripts();
 
     private static bool _initialized;
+    private static string? _databasePathOverride;
 
     /// <summary>
     /// Gets or sets an optional override for the database path, primarily intended for tests.
     /// When set, this path is used instead of the Jellyfin data directory.
     /// </summary>
-    public static string? DatabasePathOverride { get; set; }
+    public static string? DatabasePathOverride
+    {
+        get => _databasePathOverride;
+        set
+        {
+            // When the database path changes, force re-initialization so that
+            // migrations are applied for the new database file. This is
+            // especially important for tests that use multiple temp databases.
+            if (!string.Equals(_databasePathOverride, value, StringComparison.OrdinalIgnoreCase))
+            {
+                _databasePathOverride = value;
+                _initialized = false;
+            }
+        }
+    }
 
     private static string DatabasePath
     {

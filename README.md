@@ -68,6 +68,10 @@ To build and run Jellydash you need:
 	- Provide any required API key or authentication details as prompted.
 	- Save settings; the dashboard will begin loading active sessions.
 
+## Optional .env configuration
+
+To help with faster debugging Jellydash also support build time environment variables. It should be located in `assets/env/.env`. If the file is found it will use the values from the file, if not it will aim for sensible defaults and requires manual configuration from the user.
+
 ## Development
 
 - Run all tests:
