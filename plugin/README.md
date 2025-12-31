@@ -32,17 +32,19 @@ High‑level pieces:
 		- Builds a `HistoryEntry` that includes all UI‑relevant fields plus bitrate/direct‑stream/transcode details.
 		- Persists the span through the history repository (see below).
 
-- **History storage**
-	- `Services/HistoryRepository.cs` is a simple file‑backed store for `HistoryEntry` objects.
+‑ **History storage**
+	- `Services/HistoryRepository.cs` is a SQLite‑backed store for `HistoryEntry` objects.
 	- Storage format:
-		- JSON Lines file (`history.jsonl`) under the Jellyfin data path: `Data/plugins/Jellydash/history.jsonl`.
-		- Each line is a single `HistoryEntry` serialized with camel‑case property names.
+		- Dedicated database file `jellydash.db` under the Jellyfin data path: `Data/plugins/Jellydash/jellydash.db`.
+		- Schema is managed via versioned SQL migration scripts in `Migrations/` (e.g. `001_Initial.sql`).
 	- Key operations:
 		- `AppendAsync(HistoryEntry)` — append a new span (used by `PlaybackHistoryLogger`).
-		- `GetRecentAsync(DateTime cutoffUtc)` — read all entries with `EndUtc >= cutoffUtc` (intended for `/Jellydash/History` style APIs).
-		- `DeleteOlderThanAsync(DateTime cutoffUtc)` — rewrite the file without spans that ended before the cutoff (intended for the scheduled cleanup task).
+		- `GetRecentAsync(DateTime cutoffUtc)` — query all entries with `EndUtc >= cutoffUtc` (used by `/Jellydash/history`).
+		- `DeleteOlderThanAsync(DateTime cutoffUtc)` — delete rows older than the cutoff (intended for the scheduled cleanup task).
 	- Concurrency:
-		- Uses a static `SemaphoreSlim` guard to ensure read/modify/write access to the history file is serialized across threads.
+		- Uses a static `SemaphoreSlim` guard to ensure DB access is serialized across threads.
+	- Migrations:
+		- On startup, reads `PRAGMA user_version` from `jellydash.db` and applies any `.sql` migration scripts with a higher version number, in order, updating `user_version` after each script.
 
 - **Service registration / event wiring**
 	- `Services/JellydashServiceRegistrator.cs` implements `MediaBrowser.Controller.Plugins.IPluginServiceRegistrator`.
@@ -57,10 +59,11 @@ High‑level pieces:
 		- Feature toggles for which activities are tracked (e.g. playback vs download).
 	- The planned scheduled task (see below) will read these settings to decide what to prune.
 
-- **Planned HTTP endpoints** (not yet implemented)
-	- `JellydashController` (or a new controller) will expose endpoints like:
-		- `GET /Jellydash/History` — return recent `HistoryEntry` objects for the configured retention window, shaped for the Jellydash Flutter client.
-	- Responses will likely be thin DTOs built from `HistoryEntry`, keeping server work minimal and pushing presentation logic to the Flutter side.
+- **HTTP endpoints**
+	- `Controllers/JellydashController.cs` exposes:
+		- `GET /Jellydash/ping` — simple health‑check endpoint returning `"pong"`.
+		- `GET /Jellydash/history` — returns recent `HistoryEntry` objects for the configured retention window, using `HistoryRepository.GetRecentAsync` with a cutoff computed from `PluginConfiguration.HistoryRetentionValue`/`HistoryRetentionUnit`.
+	- Responses return the raw `HistoryEntry` model; the Flutter client is responsible for shaping this into its own `Session`/card models.
 
 - **Planned scheduled cleanup** (not yet implemented)
 	- An `IScheduledTask` will:

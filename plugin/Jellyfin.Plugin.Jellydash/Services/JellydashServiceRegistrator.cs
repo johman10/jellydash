@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.Jellydash.Events;
+using Jellyfin.Plugin.Jellydash.Services;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Library;
@@ -18,5 +19,8 @@ public sealed class JellydashServiceRegistrator : IPluginServiceRegistrator
         // Register our playback history logger so it receives playback start/stop events.
         serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, PlaybackHistoryLogger>();
         serviceCollection.AddScoped<IEventConsumer<PlaybackStopEventArgs>, PlaybackHistoryLogger>();
+
+        // Register history repository as a singleton service for API controllers.
+        serviceCollection.AddSingleton<HistoryRepository>();
     }
 }

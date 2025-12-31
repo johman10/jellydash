@@ -13,3 +13,4 @@
 /Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/obj/Debug/net9.0/Jellyfin.Plugin.Jellydash.xml
 /Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/obj/Debug/net9.0/Jellyfin.Plugin.Jellydash.pdb
 /Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/obj/Debug/net9.0/ref/Jellyfin.Plugin.Jellydash.dll
+/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/bin/Debug/net9.0/Migrations/001_Initial.sql

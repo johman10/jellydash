@@ -49,11 +49,26 @@
             Simple controller exposing a health-check style ping endpoint.
             </summary>
         </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Controllers.JellydashController.#ctor(Jellyfin.Plugin.Jellydash.Services.HistoryRepository)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Jellydash.Controllers.JellydashController"/> class.
+            </summary>
+            <param name="historyRepository">The history repository.</param>
+        </member>
         <member name="M:Jellyfin.Plugin.Jellydash.Controllers.JellydashController.Ping">
             <summary>
             Returns a simple pong response to verify the plugin API is reachable.
             </summary>
             <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> with the string "pong".</returns>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Controllers.JellydashController.GetHistory(System.Nullable{System.Int32},System.String,System.Threading.CancellationToken)">
+            <summary>
+            Returns a page of recent history entries using cursor-based pagination.
+            </summary>
+            <param name="limit">Maximum number of entries to return (max 100, default 20).</param>
+            <param name="cursor">An opaque cursor returned from a previous page.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <returns>A page of recent history entries and a cursor for the next page, if any.</returns>
         </member>
         <member name="T:Jellyfin.Plugin.Jellydash.Events.PlaybackHistoryLogger">
             <summary>
@@ -275,8 +290,18 @@
         </member>
         <member name="T:Jellyfin.Plugin.Jellydash.Services.HistoryRepository">
             <summary>
-            Simple file-backed repository for Jellydash history entries.
+            SQLite-backed repository for Jellydash history entries.
             </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Services.HistoryRepository.GetPageAsync(System.Int32,System.Nullable{System.Int64},System.Nullable{System.DateTime},System.Threading.CancellationToken)">
+            <summary>
+            Retrieves a page of history entries ordered from most recent to oldest.
+            </summary>
+            <param name="limit">Maximum number of entries to return.</param>
+            <param name="beforeId">Optional id of the last entry from the previous page.</param>
+            <param name="beforeEndUtc">Optional end time of the last entry from the previous page.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <returns>A tuple containing the entries and paging state.</returns>
         </member>
         <member name="M:Jellyfin.Plugin.Jellydash.Services.HistoryRepository.AppendAsync(Jellyfin.Plugin.Jellydash.Models.HistoryEntry,System.Threading.CancellationToken)">
             <summary>
