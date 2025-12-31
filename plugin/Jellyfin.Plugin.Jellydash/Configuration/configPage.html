@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Jellydash</title>
+</head>
+<body>
+    <div id="JellydashConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+        <div data-role="content">
+            <div class="content-primary">
+                <div style="max-width:960px;margin:2em auto;padding:1.5em 2em;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);background-color:rgba(0,0,0,0.03);">
+                    <form id="JellydashConfigForm">
+                        <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom:1.25em;">
+                            <label class="emby-checkbox-label">
+                                <input id="EnableRetention" name="EnableRetention" type="checkbox" is="emby-checkbox" />
+                                <span>Enable retention period</span>
+                            </label>
+                            <div class="fieldDescription">If enabled, Jellydash will automatically remove history entries older than the configured number of days.</div>
+                        </div>
+                        <div class="inputContainer historyRetentionDaysInputContainer" style="margin-bottom:1.25em;">
+                            <label class="inputLabel inputLabelUnfocused" for="HistoryRetentionDays">History retention (days)</label>
+                            <input id="HistoryRetentionDays" name="HistoryRetentionDays" type="number" is="emby-input" min="1" />
+                            <div class="fieldDescription">How many days Jellydash history is kept before cleanup.</div>
+                        </div>
+                        <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom:1.25em;">
+                            <label class="emby-checkbox-label">
+                                <input id="TrackDownloads" name="TrackDownloads" type="checkbox" is="emby-checkbox" />
+                                <span>Track download activity</span>
+                            </label>
+                            <div class="fieldDescription">If enabled, Jellydash will also record media downloads as history entries.</div>
+                        </div>
+                        <div>
+                            <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                                <span>Save</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript">
+            var JellydashConfig = {
+                pluginUniqueId: '02560995-4de6-45c3-9f4f-47061951af29'
+            };
+
+            function updateRetentionInputs() {
+                var enableRetentionCheckbox = document.querySelector('#EnableRetention');
+                var retentionInput = document.querySelector('#HistoryRetentionDays');
+                var historyRetentionDaysInputContainer = document.querySelector('.historyRetentionDaysInputContainer');
+
+                var enabled = enableRetentionCheckbox.checked;
+                retentionInput.disabled = !enabled;
+                if (enabled) {
+                    historyRetentionDaysInputContainer.style.opacity = '';
+                    historyRetentionDaysInputContainer.style.cursor = '';
+                } else {
+                    historyRetentionDaysInputContainer.style.opacity = '0.4';
+                    historyRetentionDaysInputContainer.style.cursor = 'not-allowed';
+                }
+            }
+
+            document.querySelector('#JellydashConfigPage')
+                .addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(JellydashConfig.pluginUniqueId).then(function (config) {
+                        document.querySelector('#EnableRetention').checked = config.EnableRetention === true;
+                        document.querySelector('#HistoryRetentionDays').value = config.HistoryRetentionDays;
+                        document.querySelector('#TrackDownloads').checked = config.TrackDownloads;
+
+                        updateRetentionInputs();
+
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+            document.querySelector('#EnableRetention')
+                .addEventListener('change', function () {
+                    updateRetentionInputs();
+                });
+
+            document.querySelector('#JellydashConfigForm')
+                .addEventListener('submit', function (e) {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(JellydashConfig.pluginUniqueId).then(function (config) {
+                        config.EnableRetention = document.querySelector('#EnableRetention').checked;
+                        config.HistoryRetentionDays = parseInt(document.querySelector('#HistoryRetentionDays').value, 10);
+                        config.TrackDownloads = document.querySelector('#TrackDownloads').checked;
+                        ApiClient.updatePluginConfiguration(JellydashConfig.pluginUniqueId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+
+                    e.preventDefault();
+                    return false;
+                });
+        </script>
+    </div>
+</body>
+</html>

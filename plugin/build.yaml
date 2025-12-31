@@ -1,0 +1,16 @@
+---
+name: "Jellydash"
+guid: "02560995-4de6-45c3-9f4f-47061951af29"
+version: "1.0.0.0"
+targetAbi: "11.0.0.0"
+framework: "net9.0"
+overview: "Short description about your plugin"
+description: >
+  This is a longer description that can span more than one
+  line and include details about your plugin.
+category: "General"
+owner: "Johman10"
+artifacts:
+- "Jellyfin.Plugin.Jellydash.dll"
+changelog: >
+  changelog
