@@ -3,22 +3,6 @@ using MediaBrowser.Model.Plugins;
 namespace Jellyfin.Plugin.Jellydash.Configuration;
 
 /// <summary>
-/// Units for the history retention window.
-/// </summary>
-public enum RetentionUnit
-{
-    /// <summary>
-    /// Retain history for a number of hours.
-    /// </summary>
-    Hours,
-
-    /// <summary>
-    /// Retain history for a number of days.
-    /// </summary>
-    Days
-}
-
-/// <summary>
 /// Plugin configuration.
 /// </summary>
 public class PluginConfiguration : BasePluginConfiguration
@@ -28,20 +12,20 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public PluginConfiguration()
     {
-        HistoryRetentionValue = 7;
-        HistoryRetentionUnit = RetentionUnit.Days;
+        HistoryRetentionDays = 30;
+        EnableRetention = true;
         TrackDownloads = true;
     }
 
     /// <summary>
-    /// Gets or sets the numeric value for the history retention window.
+    /// Gets or sets the history retention period in days.
     /// </summary>
-    public int HistoryRetentionValue { get; set; }
+    public int HistoryRetentionDays { get; set; }
 
     /// <summary>
-    /// Gets or sets the unit for the history retention window.
+    /// Gets or sets a value indicating whether retention-based cleanup is enabled.
     /// </summary>
-    public RetentionUnit HistoryRetentionUnit { get; set; }
+    public bool EnableRetention { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether download activity is tracked.

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jellyfin.Plugin.Jellydash")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("11.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("11.0.0.0+ae26da3e7a87accbc6d25b96ad9967de889370dc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("11.0.0.0+b801b13682c5b738aa8628bbd0d818b3a3c01d29")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jellyfin.Plugin.Jellydash")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jellyfin.Plugin.Jellydash")]
 [assembly: System.Reflection.AssemblyVersionAttribute("11.0.0.0")]

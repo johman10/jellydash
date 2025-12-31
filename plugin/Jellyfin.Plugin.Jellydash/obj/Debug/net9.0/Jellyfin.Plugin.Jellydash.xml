@@ -4,21 +4,6 @@
         <name>Jellyfin.Plugin.Jellydash</name>
     </assembly>
     <members>
-        <member name="T:Jellyfin.Plugin.Jellydash.Configuration.RetentionUnit">
-            <summary>
-            Units for the history retention window.
-            </summary>
-        </member>
-        <member name="F:Jellyfin.Plugin.Jellydash.Configuration.RetentionUnit.Hours">
-            <summary>
-            Retain history for a number of hours.
-            </summary>
-        </member>
-        <member name="F:Jellyfin.Plugin.Jellydash.Configuration.RetentionUnit.Days">
-            <summary>
-            Retain history for a number of days.
-            </summary>
-        </member>
         <member name="T:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration">
             <summary>
             Plugin configuration.
@@ -29,14 +14,14 @@
             Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration"/> class.
             </summary>
         </member>
-        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.HistoryRetentionValue">
+        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.HistoryRetentionDays">
             <summary>
-            Gets or sets the numeric value for the history retention window.
+            Gets or sets the history retention period in days.
             </summary>
         </member>
-        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.HistoryRetentionUnit">
+        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.EnableRetention">
             <summary>
-            Gets or sets the unit for the history retention window.
+            Gets or sets a value indicating whether retention-based cleanup is enabled.
             </summary>
         </member>
         <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.TrackDownloads">
@@ -286,6 +271,35 @@
             </summary>
         </member>
         <member name="M:Jellyfin.Plugin.Jellydash.Plugin.GetPages">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Jellydash.ScheduledTasks.JellydashHistoryCleanupTask">
+            <summary>
+            Scheduled task that prunes historical Jellydash entries older than the configured retention window.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.ScheduledTasks.JellydashHistoryCleanupTask.#ctor(Jellyfin.Plugin.Jellydash.Services.HistoryRepository)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Jellydash.ScheduledTasks.JellydashHistoryCleanupTask"/> class.
+            </summary>
+            <param name="historyRepository">The history repository.</param>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.ScheduledTasks.JellydashHistoryCleanupTask.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.ScheduledTasks.JellydashHistoryCleanupTask.Key">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.ScheduledTasks.JellydashHistoryCleanupTask.Description">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.ScheduledTasks.JellydashHistoryCleanupTask.Category">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.ScheduledTasks.JellydashHistoryCleanupTask.ExecuteAsync(System.IProgress{System.Double},System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.ScheduledTasks.JellydashHistoryCleanupTask.GetDefaultTriggers">
             <inheritdoc />
         </member>
         <member name="T:Jellyfin.Plugin.Jellydash.Services.HistoryRepository">

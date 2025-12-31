@@ -62,15 +62,18 @@ High‑level pieces:
 - **HTTP endpoints**
 	- `Controllers/JellydashController.cs` exposes:
 		- `GET /Jellydash/ping` — simple health‑check endpoint returning `"pong"`.
-		- `GET /Jellydash/history` — returns recent `HistoryEntry` objects for the configured retention window, using `HistoryRepository.GetRecentAsync` with a cutoff computed from `PluginConfiguration.HistoryRetentionValue`/`HistoryRetentionUnit`.
+		- `GET /Jellydash/history` — returns a page of recent `HistoryEntry` objects using cursor‑based pagination:
+			- Query parameters: `limit` (max 100, default 20) and optional `cursor`.
+			- Response shape: `{ "items": HistoryEntry[], "nextCursor": string | null }`.
+			- Cursors are opaque Base64 tokens derived from the last entry's `EndUtc` and database id.
 	- Responses return the raw `HistoryEntry` model; the Flutter client is responsible for shaping this into its own `Session`/card models.
 
-- **Planned scheduled cleanup** (not yet implemented)
-	- An `IScheduledTask` will:
-		- Run periodically (e.g. daily).
-		- Read the plugin configuration retention window.
-		- Call `HistoryRepository.DeleteOlderThanAsync` with the calculated cutoff.
-	- This keeps `history.jsonl` from growing without bound.
+- **Scheduled cleanup**
+	- `ScheduledTasks/JellydashHistoryCleanupTask.cs` implements `IScheduledTask` and:
+		- Runs daily by default around 03:00 server time (via `TaskTriggerInfo`).
+		- Reads the plugin configuration retention window (`HistoryRetentionValue` + `HistoryRetentionUnit`).
+		- Computes `cutoffUtc` and calls `HistoryRepository.DeleteOlderThanAsync` to prune old rows from `jellydash.db`.
+	- This keeps the history table from growing without bound while respecting the configured retention policy.
 
 - **Flutter client integration (planned)**
 	- The Flutter app will add a Jellydash‑plugin API service that:
