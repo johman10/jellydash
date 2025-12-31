@@ -5,11 +5,11 @@ applyTo: "**"
 # Jellydash AI Coding Agent Instructions
 
 ## Project Overview
-Jellydash is a dashboard for [Jellyfin](https://jellyfin.org/), providing a real-time view of current and recent activity via direct API integration. The project is designed for quick insights into media usage.
+Jellydash is a dashboard for [Jellyfin](https://jellyfin.org/), providing a real-time view of current and recent activity. The Flutter client talks directly to Jellyfin, including the Jellydash server-side plugin, to provide quick insights into media usage.
 
 ## Architecture & Key Patterns
 - **Single-Page Dashboard**: The app is structured as a dashboard UI, focused on displaying live and recent Jellyfin activity.
-- **Direct Jellyfin API Integration**: All data is fetched directly from the Jellyfin API. No intermediate backend is present.
+- **Direct Jellyfin API Integration**: All data is fetched directly from the Jellyfin server APIs, including the Jellydash plugin endpoints (e.g., `/Jellydash/history`). No separate application backend is present.
 - **Platform Target**: Intended for web, mobile, and desktop (use Flutter for new code; follow Dart conventions).
 - **Responsiveness**: UI must adapt to various screen sizes and support both light and dark modes.
  - **Activity Cards**: Current activity is rendered via `CurrentActivityCard` inside `CurrentActivities` using responsive Wrap-based columns (no implicit scrolling in these widgets; scrolling is handled by higher-level layouts).
@@ -28,7 +28,7 @@ Jellydash is a dashboard for [Jellyfin](https://jellyfin.org/), providing a real
 
 ## Key Files & Directories
 - `.github/copilot-instructions.md`: AI agent instructions (this file)
-- `plugin`: Jellyfin plugin source code and configuration
+- `plugin`: Jellyfin plugin source code and configuration (history tracking, server endpoints, scheduled cleanup)
 - `README.md`: Project purpose, high-level usage, and Jellyfin integration notes
 
 ## Examples
@@ -37,5 +37,5 @@ Jellydash is a dashboard for [Jellyfin](https://jellyfin.org/), providing a real
  - When updating activity-related UI (e.g., remaining time, pause overlays, bitrate display), keep `Session` semantics consistent and update the corresponding tests in `test/widgets/current_activity_card_test.dart` and `test/widgets/current_activities_test.dart`.
 
 ## Notes
-- No backend server: all logic is client-side.
+- No separate backend beyond the Jellydash Jellyfin plugin: the Flutter app calls Jellyfin (core + plugin) directly.
 - Keep instructions concise and actionable for future maintainers and AI agents.

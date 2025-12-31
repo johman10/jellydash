@@ -8,10 +8,38 @@
       "label": "build-and-copy",
       "dependsOrder": "sequence",
       "dependsOn": [
+        "clean",
         "build",
         "make-plugin-dir",
         "copy-dll"
       ]
+    },
+    {
+      // Ensure the plugin directory exists before trying to use it
+      "label": "clean",
+      "type": "shell",
+      "command": "rm",
+      "windows": {
+        "args": [
+          "-rf",
+          "${config:jellyfinWindowsDataDir}/plugins/${config:pluginName}/",
+          "${workspaceFolder}/plugin/${config:pluginName}/bin"
+        ]
+      },
+      "linux": {
+        "args": [
+          "-rf",
+          "${config:jellyfinWindowsDataDir}/plugins/${config:pluginName}/",
+          "${workspaceFolder}/plugin/${config:pluginName}/bin"
+        ]
+      },
+      "osx": {
+        "args": [
+          "-rf",
+          "\"${config:jellyfinWindowsDataDir}/plugins/${config:pluginName}/\"",
+          "${workspaceFolder}/plugin/${config:pluginName}/bin"
+        ]
+      }
     },
     {
       // Build the plugin

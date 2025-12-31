@@ -10,6 +10,45 @@ The goal of this plugin is to provide Jellydash with:
 
 Jellyfin itself does not keep rich, queryable “watch span” history for all sessions. This plugin hooks into Jellyfin’s event system and maintains its own lightweight history store.
 
+## To run locally
+
+### Prerequisites
+
+- .NET SDK 9.x installed (for building Jellyfin and the plugin).
+- FFmpeg installed and available on your PATH (required by Jellyfin).
+- The .NET portable Jellyfin application downloaded from [jellyfin.org](https://jellyfin.org/downloads/dotnet)
+- [VS Code with the C# (.NET) extension](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp).
+
+### VS Code setup
+
+This repo includes a VS Code setup to build, deploy, and debug the plugin against a local Jellyfin checkout.
+
+Configuration lives in `.vscode/settings.json` and `.vscode/tasks.json`:
+
+- Settings:
+	- `jellyfinDir`: path to the Jellyfin server checkout (defaults to `${workspaceFolder}/jellyfin`).
+	- `jellyfinWindowsDataDir` / `jellyfinLinuxDataDir` / `jellyfinOsxDataDir`: Jellyfin data directories where plugins are loaded from.
+	- `pluginName`: should remain `Jellyfin.Plugin.Jellydash`.
+
+- Tasks:
+	- `build-and-copy` (chain task):
+		- Runs `clean` → `build` → `make-plugin-dir` → `copy-dll`.
+		- `build` runs `dotnet publish` on `plugin/${pluginName}.sln` in Debug.
+		- `copy-dll` copies the published plugin files into the configured Jellyfin data `plugins/${pluginName}` folder for your platform.
+
+### Debugging Jellydash with Jellyfin
+
+1. Ensure the portable Jellyfin application is present in `jellyfin/` in the root of the repo
+2. Open this repo in VS Code.
+3. Ensure `.vscode/settings.json` points to your Jellyfin checkout and data directory.
+4. Use the `Launch` debug configuration from `.vscode/launch.json`:
+	 - This starts `jellyfin.dll` from `${config:jellyfinDir}` under the debugger.
+5. Once Jellyfin is running, log into the [web UI](http://localhost:8096/web/) and verify that:
+	 - The "Jellydash" plugin is enabled under **Dashboard → Plugins**.
+	 - The Jellydash configuration page is available and the `/Jellydash/ping` and `/Jellydash/history` endpoints respond.
+
+The Flutter dashboard can then be pointed at this local Jellyfin instance (including the Jellydash plugin endpoints) for end‑to‑end development.
+
 ## Architecture Overview
 
 High‑level pieces:
@@ -39,8 +78,9 @@ High‑level pieces:
 		- Schema is managed via versioned SQL migration scripts in `Migrations/` (e.g. `001_Initial.sql`).
 	- Key operations:
 		- `AppendAsync(HistoryEntry)` — append a new span (used by `PlaybackHistoryLogger`).
-		- `GetRecentAsync(DateTime cutoffUtc)` — query all entries with `EndUtc >= cutoffUtc` (used by `/Jellydash/history`).
-		- `DeleteOlderThanAsync(DateTime cutoffUtc)` — delete rows older than the cutoff (intended for the scheduled cleanup task).
+		- `GetPageAsync(int limit, long? beforeId, DateTime? beforeEndUtc, CancellationToken)` — paged, most‑recent‑first query used by `/Jellydash/history`.
+		- `GetRecentAsync(DateTime cutoffUtc)` — convenience query for entries since a given time.
+		- `DeleteOlderThanAsync(DateTime cutoffUtc)` — delete rows older than the cutoff (used by the scheduled cleanup task).
 	- Concurrency:
 		- Uses a static `SemaphoreSlim` guard to ensure DB access is serialized across threads.
 	- Migrations:
@@ -55,9 +95,13 @@ High‑level pieces:
 
 - **Plugin configuration / retention**
 	- `PluginConfiguration` includes settings such as:
-		- History retention window (e.g. keep the last N days of spans).
-		- Feature toggles for which activities are tracked (e.g. playback vs download).
-	- The planned scheduled task (see below) will read these settings to decide what to prune.
+		- `HistoryRetentionDays` — how many days of history to keep when retention is enabled (default: 30).
+		- `EnableRetention` — whether automatic cleanup is enabled; when disabled, history is not pruned.
+		- `TrackDownloads` — whether download activity is tracked alongside playback.
+	- The configuration UI (`Configuration/configPage.html`) exposes these settings:
+		- "Enable retention period" checkbox that also enables/disables the days input.
+		- A numeric "History retention (days)" field.
+		- A "Track download activity" checkbox.
 
 - **HTTP endpoints**
 	- `Controllers/JellydashController.cs` exposes:
@@ -71,17 +115,6 @@ High‑level pieces:
 - **Scheduled cleanup**
 	- `ScheduledTasks/JellydashHistoryCleanupTask.cs` implements `IScheduledTask` and:
 		- Runs daily by default around 03:00 server time (via `TaskTriggerInfo`).
-		- Reads the plugin configuration retention window (`HistoryRetentionValue` + `HistoryRetentionUnit`).
-		- Computes `cutoffUtc` and calls `HistoryRepository.DeleteOlderThanAsync` to prune old rows from `jellydash.db`.
-	- This keeps the history table from growing without bound while respecting the configured retention policy.
-
-- **Flutter client integration (planned)**
-	- The Flutter app will add a Jellydash‑plugin API service that:
-		- Calls `/Jellydash/History`.
-		- Maps the response into a `Session`‑like Dart model used by widgets in `lib/widgets/current_activity_card.dart` and new “recent history” widgets.
-	- The goal is to allow the history UI to reuse most of the semantics and styling from the existing `CurrentActivityCard` (title/subtitle, remaining time, bitrate, transcoding badges, user avatar, etc.).
-
-## To run locally
-
-FFmpeg installed
-Portable .NET installation for Jellyfin in the root of repository
+		- Checks `EnableRetention` and exits early when retention is disabled.
+		- Uses `HistoryRetentionDays` to compute `cutoffUtc` and calls `HistoryRepository.DeleteOlderThanAsync` to prune old rows from `jellydash.db`.
+	- This keeps the history table from growing without bound while respecting the configured retention policy (or leaving all history intact when retention is disabled).
