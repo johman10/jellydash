@@ -12,11 +12,14 @@ namespace Jellyfin.Plugin.Jellydash.Tests;
 
 public class HistoryRepositoryTests
 {
+    private static readonly string DatabasePath;
+
     static HistoryRepositoryTests()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
         Directory.CreateDirectory(tempDir);
-        HistoryRepository.DatabasePathOverride = Path.Combine(tempDir, "history.db");
+        DatabasePath = Path.Combine(tempDir, "history.db");
+        HistoryRepository.DatabasePathOverride = DatabasePath;
     }
 
     [Fact]
@@ -67,6 +70,31 @@ public class HistoryRepositoryTests
         var remaining = await repository.GetRecentAsync(DateTime.MinValue, cancellationToken);
         Assert.Single(remaining);
         Assert.Equal(newer.EndUtc, remaining[0].EndUtc);
+    }
+
+    [Fact]
+    public async Task GetRecentAsync_ReturnsEntriesOnOrAfterCutoff()
+    {
+        var repository = new HistoryRepository();
+        var cancellationToken = CancellationToken.None;
+
+        // Ensure a clean database.
+        await repository.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), cancellationToken);
+
+        var now = DateTime.UtcNow;
+        var older = CreateEntry(now.AddHours(-3), now.AddHours(-2));
+        var cutoffEntry = CreateEntry(now.AddHours(-2), now.AddHours(-1));
+        var newer = CreateEntry(now.AddHours(-1), now);
+
+        await repository.AppendAsync(older, cancellationToken);
+        await repository.AppendAsync(cutoffEntry, cancellationToken);
+        await repository.AppendAsync(newer, cancellationToken);
+
+        var cutoff = cutoffEntry.EndUtc;
+        var recent = await repository.GetRecentAsync(cutoff, cancellationToken);
+
+        Assert.Equal(2, recent.Count);
+        Assert.True(recent.All(e => e.EndUtc >= cutoff));
     }
 
     private static HistoryEntry CreateEntry(DateTime startUtc, DateTime endUtc)

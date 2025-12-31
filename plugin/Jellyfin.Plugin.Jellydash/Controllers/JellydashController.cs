@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jellyfin.Plugin.Jellydash.Controllers
 {
     /// <summary>
-    /// Simple controller exposing a health-check style ping endpoint.
+    /// Controller exposing Jellydash plugin HTTP endpoints.
     /// </summary>
     [Route("Jellydash")]
     [ApiController]
@@ -25,17 +25,6 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
         public JellydashController(HistoryRepository historyRepository)
         {
             _historyRepository = historyRepository;
-        }
-
-        /// <summary>
-        /// Returns a simple pong response to verify the plugin API is reachable.
-        /// </summary>
-        /// <returns>An <see cref="IActionResult"/> with the string "pong".</returns>
-        [HttpGet("ping")]
-        [Authorize]
-        public IActionResult Ping()
-        {
-            return Ok("pong");
         }
 
         /// <summary>

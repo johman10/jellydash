@@ -45,7 +45,7 @@ Configuration lives in `.vscode/settings.json` and `.vscode/tasks.json`:
 	 - This starts `jellyfin.dll` from `${config:jellyfinDir}` under the debugger.
 5. Once Jellyfin is running, log into the [web UI](http://localhost:8096/web/) and verify that:
 	 - The "Jellydash" plugin is enabled under **Dashboard → Plugins**.
-	 - The Jellydash configuration page is available and the `/Jellydash/ping` and `/Jellydash/history` endpoints respond.
+	 - The Jellydash configuration page is available and the `/Jellydash/history` endpoint responds.
 
 The Flutter dashboard can then be pointed at this local Jellyfin instance (including the Jellydash plugin endpoints) for end‑to‑end development.
 
@@ -115,7 +115,6 @@ High‑level pieces:
 
 - **HTTP endpoints**
 	- `Controllers/JellydashController.cs` exposes:
-		- `GET /Jellydash/ping` — simple health‑check endpoint returning `"pong"`.
 		- `GET /Jellydash/history` — returns a page of recent `HistoryEntry` objects using cursor‑based pagination:
 			- Query parameters: `limit` (max 100, default 20) and optional `cursor`.
 			- Response shape: `{ "items": HistoryEntry[], "nextCursor": string | null }`.
