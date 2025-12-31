@@ -19,7 +19,8 @@ desktop, tablet, and mobile.
 Jellydash talks directly to your Jellyfin server using its public HTTP API. The Flutter
 app fetches session information from Jellyfin, maps it into `Session` models, and
 renders them using widgets such as `CurrentActivities` and `CurrentActivityCard`.
-There is no extra backend; all logic runs client‑side.
+For richer history data, Jellydash can use the bundled Jellydash Jellyfin plugin
+which exposes a `/Jellydash/history` endpoint with cursor‑based pagination.
 
 ## Prerequisites
 
@@ -28,6 +29,9 @@ To build and run Jellydash you need:
 - A running Jellyfin server you can reach over HTTP/HTTPS.
 - Flutter SDK (3.x or newer) installed and on your `PATH`.
 - A device or emulator (web, mobile, or desktop) supported by Flutter.
+ - (Optional, recommended) The Jellydash Jellyfin plugin built and deployed to your
+	 Jellyfin server so the dashboard can query `/Jellydash/history` for historical
+	 activity.
 
 ## Getting Started
 
@@ -71,6 +75,12 @@ To build and run Jellydash you need:
   ```bash
   flutter test
   ```
+
+- Run the Jellydash Jellyfin plugin unit tests (from the `plugin/` folder):
+
+	```bash
+	dotnet test Jellyfin.Plugin.Jellydash.sln
+	```
 
 - Key widgets to be aware of:
   - `lib/widgets/current_activities.dart` – responsive layout of activity cards.
