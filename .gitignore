@@ -50,3 +50,4 @@ session-example.json
 jellyfin
 
 plugin/Jellyfin.Plugin.Jellydash/bin
+plugin/Jellyfin.Plugin.Jellydash/obj

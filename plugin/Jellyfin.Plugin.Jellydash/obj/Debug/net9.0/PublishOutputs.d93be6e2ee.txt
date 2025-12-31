@@ -1,5 +1,0 @@
-/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/bin/Debug/net9.0/publish/Migrations/001_Initial.sql
-/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/bin/Debug/net9.0/publish/Jellyfin.Plugin.Jellydash.dll
-/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/bin/Debug/net9.0/publish/Jellyfin.Plugin.Jellydash.pdb
-/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/bin/Debug/net9.0/publish/Jellyfin.Plugin.Jellydash.xml
-/Users/jvaneck/Sites/jellydash/plugin/Jellyfin.Plugin.Jellydash/bin/Debug/net9.0/publish/Jellyfin.Plugin.Jellydash.deps.json
