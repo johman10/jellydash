@@ -28,6 +28,7 @@ Jellydash is a dashboard for [Jellyfin](https://jellyfin.org/), providing a real
 
 ## Key Files & Directories
 - `.github/copilot-instructions.md`: AI agent instructions (this file)
+- `plugin`: Jellyfin plugin source code and configuration
 - `README.md`: Project purpose, high-level usage, and Jellyfin integration notes
 
 ## Examples

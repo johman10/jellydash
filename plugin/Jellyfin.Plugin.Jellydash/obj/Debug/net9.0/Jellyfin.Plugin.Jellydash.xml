@@ -4,19 +4,19 @@
         <name>Jellyfin.Plugin.Jellydash</name>
     </assembly>
     <members>
-        <member name="T:Jellyfin.Plugin.Jellydash.Configuration.SomeOptions">
+        <member name="T:Jellyfin.Plugin.Jellydash.Configuration.RetentionUnit">
             <summary>
-            The configuration options.
+            Units for the history retention window.
             </summary>
         </member>
-        <member name="F:Jellyfin.Plugin.Jellydash.Configuration.SomeOptions.OneOption">
+        <member name="F:Jellyfin.Plugin.Jellydash.Configuration.RetentionUnit.Hours">
             <summary>
-            Option one.
+            Retain history for a number of hours.
             </summary>
         </member>
-        <member name="F:Jellyfin.Plugin.Jellydash.Configuration.SomeOptions.AnotherOption">
+        <member name="F:Jellyfin.Plugin.Jellydash.Configuration.RetentionUnit.Days">
             <summary>
-            Second option.
+            Retain history for a number of days.
             </summary>
         </member>
         <member name="T:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration">
@@ -29,24 +29,19 @@
             Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration"/> class.
             </summary>
         </member>
-        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.TrueFalseSetting">
+        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.HistoryRetentionValue">
             <summary>
-            Gets or sets a value indicating whether some true or false setting is enabled..
+            Gets or sets the numeric value for the history retention window.
             </summary>
         </member>
-        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.AnInteger">
+        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.HistoryRetentionUnit">
             <summary>
-            Gets or sets an integer setting.
+            Gets or sets the unit for the history retention window.
             </summary>
         </member>
-        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.AString">
+        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.TrackDownloads">
             <summary>
-            Gets or sets a string setting.
-            </summary>
-        </member>
-        <member name="P:Jellyfin.Plugin.Jellydash.Configuration.PluginConfiguration.Options">
-            <summary>
-            Gets or sets an enum option.
+            Gets or sets a value indicating whether download activity is tracked.
             </summary>
         </member>
         <member name="T:Jellyfin.Plugin.Jellydash.Controllers.JellydashController">
@@ -59,6 +54,193 @@
             Returns a simple pong response to verify the plugin API is reachable.
             </summary>
             <returns>An <see cref="T:Microsoft.AspNetCore.Mvc.IActionResult"/> with the string "pong".</returns>
+        </member>
+        <member name="T:Jellyfin.Plugin.Jellydash.Events.PlaybackHistoryLogger">
+            <summary>
+            Records Jellydash history entries when playback starts and stops.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Events.PlaybackHistoryLogger.#ctor(Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Jellydash.Events.PlaybackHistoryLogger})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Jellydash.Events.PlaybackHistoryLogger"/> class.
+            </summary>
+            <param name="logger">Logger instance.</param>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Events.PlaybackHistoryLogger.OnEvent(MediaBrowser.Controller.Library.PlaybackStartEventArgs)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Events.PlaybackHistoryLogger.OnEvent(MediaBrowser.Controller.Library.PlaybackStopEventArgs)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Jellydash.Models.HistoryEntry">
+            <summary>
+            Represents a single contiguous playback or download span for a media item.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.UserId">
+            <summary>
+            Gets or sets the Jellyfin user id associated with this entry.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.UserName">
+            <summary>
+            Gets or sets the user name for display.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.UserImageUrl">
+            <summary>
+            Gets or sets the URL (or path) to the user's primary image.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.ItemId">
+            <summary>
+            Gets or sets the Jellyfin item id.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.ClientName">
+            <summary>
+            Gets or sets the client application name.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.DeviceName">
+            <summary>
+            Gets or sets the device name.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.MediaType">
+            <summary>
+            Gets or sets the media type (e.g. Movie, Episode).
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.ItemName">
+            <summary>
+            Gets or sets the item name (series or movie name).
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.SeriesName">
+            <summary>
+            Gets or sets the series name when the item is an episode.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.SeasonNumber">
+            <summary>
+            Gets or sets the season number when the item is an episode.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.EpisodeNumber">
+            <summary>
+            Gets or sets the episode number when the item is an episode.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.ProductionYear">
+            <summary>
+            Gets or sets the production year of the item.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.PrimaryGenre">
+            <summary>
+            Gets or sets the primary genre of the item, if known.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.PrimaryImagePath">
+            <summary>
+            Gets or sets the primary image path or URL for the item.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.StartUtc">
+            <summary>
+            Gets or sets the UTC timestamp when this span started.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.EndUtc">
+            <summary>
+            Gets or sets the UTC timestamp when this span ended.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.RuntimeTicks">
+            <summary>
+            Gets or sets the total runtime of the item in ticks.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.StartPositionTicks">
+            <summary>
+            Gets or sets the starting position of this span in ticks.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.EndPositionTicks">
+            <summary>
+            Gets or sets the ending position of this span in ticks.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.StartPercentage">
+            <summary>
+            Gets or sets the starting watched percentage (0-100).
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.EndPercentage">
+            <summary>
+            Gets or sets the ending watched percentage (0-100).
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.IsDownload">
+            <summary>
+            Gets or sets a value indicating whether this entry represents a download activity.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.DownloadSizeBytes">
+            <summary>
+            Gets or sets the total download size in bytes, if applicable.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.DownloadedBytes">
+            <summary>
+            Gets or sets the downloaded bytes at the end of this span, if applicable.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.DownloadProgressPercent">
+            <summary>
+            Gets or sets the download progress percentage (0-100) at the end of this span.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.Bitrate">
+            <summary>
+            Gets or sets the overall bitrate in bits per second, if known.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.IsVideoDirectStream">
+            <summary>
+            Gets or sets a value indicating whether the video stream was direct during this span.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.IsAudioDirectStream">
+            <summary>
+            Gets or sets a value indicating whether the audio stream was direct during this span.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.IsTranscoding">
+            <summary>
+            Gets or sets a value indicating whether this span was transcoded.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.TranscodeVideoCodec">
+            <summary>
+            Gets or sets the video codec used during this span when transcoding.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.TranscodeAudioCodec">
+            <summary>
+            Gets or sets the audio codec used during this span when transcoding.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.TranscodeContainer">
+            <summary>
+            Gets or sets the container format used during this span when transcoding.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Models.HistoryEntry.TranscodeHardwareAcceleration">
+            <summary>
+            Gets or sets the hardware acceleration mode used, if any.
+            </summary>
         </member>
         <member name="T:Jellyfin.Plugin.Jellydash.Plugin">
             <summary>
@@ -83,7 +265,49 @@
             Gets the current plugin instance.
             </summary>
         </member>
+        <member name="P:Jellyfin.Plugin.Jellydash.Plugin.ApplicationPaths">
+            <summary>
+            Gets the application paths for the current server.
+            </summary>
+        </member>
         <member name="M:Jellyfin.Plugin.Jellydash.Plugin.GetPages">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Jellydash.Services.HistoryRepository">
+            <summary>
+            Simple file-backed repository for Jellydash history entries.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Services.HistoryRepository.AppendAsync(Jellyfin.Plugin.Jellydash.Models.HistoryEntry,System.Threading.CancellationToken)">
+            <summary>
+            Appends a history entry to the store.
+            </summary>
+            <param name="entry">The entry to store.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <returns>A task representing the asynchronous operation.</returns>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Services.HistoryRepository.GetRecentAsync(System.DateTime,System.Threading.CancellationToken)">
+            <summary>
+            Reads all entries with an end time greater than or equal to the specified cutoff.
+            </summary>
+            <param name="cutoffUtc">UTC cutoff time.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <returns>A list of recent history entries.</returns>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Services.HistoryRepository.DeleteOlderThanAsync(System.DateTime,System.Threading.CancellationToken)">
+            <summary>
+            Deletes entries older than the specified cutoff.
+            </summary>
+            <param name="cutoffUtc">UTC cutoff time.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <returns>The number of removed entries.</returns>
+        </member>
+        <member name="T:Jellyfin.Plugin.Jellydash.Services.JellydashServiceRegistrator">
+            <summary>
+            Registers Jellydash plugin services with the Jellyfin DI container.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Jellydash.Services.JellydashServiceRegistrator.RegisterServices(Microsoft.Extensions.DependencyInjection.IServiceCollection,MediaBrowser.Controller.IServerApplicationHost)">
             <inheritdoc />
         </member>
     </members>

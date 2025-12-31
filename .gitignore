@@ -48,3 +48,5 @@ session-example.json
 .env
 
 jellyfin
+
+plugin/Jellyfin.Plugin.Jellydash/bin

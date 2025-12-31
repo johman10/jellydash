@@ -3,19 +3,19 @@ using MediaBrowser.Model.Plugins;
 namespace Jellyfin.Plugin.Jellydash.Configuration;
 
 /// <summary>
-/// The configuration options.
+/// Units for the history retention window.
 /// </summary>
-public enum SomeOptions
+public enum RetentionUnit
 {
     /// <summary>
-    /// Option one.
+    /// Retain history for a number of hours.
     /// </summary>
-    OneOption,
+    Hours,
 
     /// <summary>
-    /// Second option.
+    /// Retain history for a number of days.
     /// </summary>
-    AnotherOption
+    Days
 }
 
 /// <summary>
@@ -28,30 +28,23 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public PluginConfiguration()
     {
-        // set default options here
-        Options = SomeOptions.AnotherOption;
-        TrueFalseSetting = true;
-        AnInteger = 2;
-        AString = "string";
+        HistoryRetentionValue = 7;
+        HistoryRetentionUnit = RetentionUnit.Days;
+        TrackDownloads = true;
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether some true or false setting is enabled..
+    /// Gets or sets the numeric value for the history retention window.
     /// </summary>
-    public bool TrueFalseSetting { get; set; }
+    public int HistoryRetentionValue { get; set; }
 
     /// <summary>
-    /// Gets or sets an integer setting.
+    /// Gets or sets the unit for the history retention window.
     /// </summary>
-    public int AnInteger { get; set; }
+    public RetentionUnit HistoryRetentionUnit { get; set; }
 
     /// <summary>
-    /// Gets or sets a string setting.
+    /// Gets or sets a value indicating whether download activity is tracked.
     /// </summary>
-    public string AString { get; set; }
-
-    /// <summary>
-    /// Gets or sets an enum option.
-    /// </summary>
-    public SomeOptions Options { get; set; }
+    public bool TrackDownloads { get; set; }
 }
