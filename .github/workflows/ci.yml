@@ -17,10 +17,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
-          cache: 'nuget'
-          cache-dependency-path: |
-            plugin/**/packages.lock.json
-            plugin/**/*.csproj
 
       - name: Restore .NET dependencies
         working-directory: plugin
@@ -43,10 +39,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
-          cache: 'nuget'
-          cache-dependency-path: |
-            plugin/**/packages.lock.json
-            plugin/**/*.csproj
 
       - name: Restore .NET dependencies
         working-directory: plugin
