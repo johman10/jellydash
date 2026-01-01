@@ -45,7 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await service.savePollingInterval(pollingInterval);
   }
 
-  handleSavePressed() async {
+  Future<void> handleSavePressed() async {
     var scaffoldMessenger = ScaffoldMessenger.of(context);
     if (_formKey.currentState!.validate()) {
       await _saveSettings(_baseUrlController.text, _apiKeyController.text,

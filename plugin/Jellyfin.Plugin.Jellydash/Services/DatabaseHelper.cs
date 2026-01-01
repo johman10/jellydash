@@ -117,7 +117,7 @@ public class DatabaseHelper
         using var cmd = connection.CreateCommand();
         cmd.Transaction = transaction;
 
-#pragma warning disable CA2100 // TODO: Review SQL queries for security vulnerabilities
+#pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
         cmd.CommandText = sql;
         cmd.ExecuteNonQuery();
 

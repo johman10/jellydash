@@ -8,11 +8,11 @@ using Moq;
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
 [Collection("JellydashPluginTests")]
-public sealed class PlaybackHistoryLoggerTests
+public sealed class PlaybackTrackerTests
 {
     private static readonly DatabaseHelper DatabaseHelper;
 
-    static PlaybackHistoryLoggerTests()
+    static PlaybackTrackerTests()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
         Directory.CreateDirectory(tempDir);
@@ -20,24 +20,24 @@ public sealed class PlaybackHistoryLoggerTests
         DatabaseHelper.Initialize();
     }
 
-    private static HistoryRepository CreateRepository()
+    private static PlaybackEntryRepository CreateRepository()
     {
-        var repo = new HistoryRepository(DatabaseHelper);
+        var repo = new PlaybackEntryRepository(DatabaseHelper);
         repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None).GetAwaiter().GetResult();
         return repo;
     }
 
-    private static PlaybackHistoryLogger CreateLogger()
+    private static PlaybackTracker CreateTracker()
     {
-        var logger = Mock.Of<ILogger<PlaybackHistoryLogger>>();
-        return new PlaybackHistoryLogger(logger, DatabaseHelper);
+        var logger = Mock.Of<ILogger<PlaybackTracker>>();
+        return new PlaybackTracker(logger, DatabaseHelper);
     }
 
     [Fact]
-    public async Task OnEvent_StartAndStop_WritesHistoryEntry()
+    public async Task OnEvent_StartAndStop_WritesActivity()
     {
         var repo = CreateRepository();
-        var logger = CreateLogger();
+        var logger = CreateTracker();
 
         var userId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
@@ -55,14 +55,14 @@ public sealed class PlaybackHistoryLoggerTests
         Assert.Equal(userId, entry.UserId);
         Assert.Equal(itemId, entry.ItemId);
         Assert.Equal(0, entry.StartPercentage);
-        Assert.InRange(entry.EndPercentage, 49.0, 51.0);
+        Assert.InRange(entry.EndPercentage!.Value, 49.0, 51.0);
     }
 
     [Fact]
     public async Task OnEvent_StopWithoutStart_StillWritesEntry()
     {
         var repo = CreateRepository();
-        var logger = CreateLogger();
+        var logger = CreateTracker();
 
         var userId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
@@ -76,15 +76,15 @@ public sealed class PlaybackHistoryLoggerTests
 
         Assert.Equal(userId, entry.UserId);
         Assert.Equal(itemId, entry.ItemId);
-        Assert.InRange(entry.StartPercentage, 24.0, 26.0);
-        Assert.InRange(entry.EndPercentage, 24.0, 26.0);
+        Assert.InRange(entry.StartPercentage!.Value, 24.0, 26.0);
+        Assert.InRange(entry.EndPercentage!.Value, 24.0, 26.0);
     }
 
     [Fact]
     public async Task OnEvent_UnsupportedItemType_DoesNotWriteEntry()
     {
         var repo = CreateRepository();
-        var logger = CreateLogger();
+        var logger = CreateTracker();
 
         var userId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
