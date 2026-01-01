@@ -1,30 +1,25 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Jellyfin.Plugin.Jellydash.Models;
+﻿using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
-using Xunit;
 
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
 [Collection("JellydashPluginTests")]
 public class HistoryRepositoryTests
 {
-    private static readonly string DatabasePath;
+    private static readonly DatabaseHelper DatabaseHelper;
 
     static HistoryRepositoryTests()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
         Directory.CreateDirectory(tempDir);
-        DatabasePath = Path.Combine(tempDir, "history.db");
-        HistoryRepository.DatabasePathOverride = DatabasePath;
+        DatabaseHelper = new DatabaseHelper(tempDir);
+        DatabaseHelper.Initialize();
     }
 
     [Fact]
     public async Task GetPageAsync_ReturnsMostRecentFirst_AndSupportsCursor()
     {
-        var repository = new HistoryRepository();
+        var repository = new HistoryRepository(DatabaseHelper);
         var cancellationToken = CancellationToken.None;
 
         // Ensure a clean database.
@@ -49,7 +44,7 @@ public class HistoryRepositoryTests
     [Fact]
     public async Task DeleteOlderThanAsync_RemovesOnlyEntriesBeforeCutoff()
     {
-        var repository = new HistoryRepository();
+        var repository = new HistoryRepository(DatabaseHelper);
         var cancellationToken = CancellationToken.None;
 
         // Ensure a clean database.
@@ -74,7 +69,7 @@ public class HistoryRepositoryTests
     [Fact]
     public async Task GetRecentAsync_ReturnsEntriesOnOrAfterCutoff()
     {
-        var repository = new HistoryRepository();
+        var repository = new HistoryRepository(DatabaseHelper);
         var cancellationToken = CancellationToken.None;
 
         // Ensure a clean database.

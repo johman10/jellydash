@@ -12,128 +12,14 @@ namespace Jellyfin.Plugin.Jellydash.Services;
 /// <summary>
 /// SQLite-backed repository for Jellydash history entries.
 /// </summary>
-public sealed class HistoryRepository
+/// <remarks>
+/// Initializes a new instance of the <see cref="HistoryRepository"/> class.
+/// </remarks>
+/// <param name="databaseHelper">An instance of DatabaseHelper.</param>
+public sealed class HistoryRepository(DatabaseHelper databaseHelper)
 {
     private static readonly SemaphoreSlim DbLock = new(1, 1);
-    private static readonly SemaphoreSlim InitLock = new(1, 1);
-    private static readonly IReadOnlyList<(int Version, string Path)> MigrationScripts = LoadMigrationScripts();
-
-    private static bool _initialized;
-    private static string? _databasePathOverride;
-
-    /// <summary>
-    /// Gets or sets an optional override for the database path, primarily intended for tests.
-    /// When set, this path is used instead of the Jellyfin data directory.
-    /// </summary>
-    public static string? DatabasePathOverride
-    {
-        get => _databasePathOverride;
-        set
-        {
-            // When the database path changes, force re-initialization so that
-            // migrations are applied for the new database file. This is
-            // especially important for tests that use multiple temp databases.
-            if (!string.Equals(_databasePathOverride, value, StringComparison.OrdinalIgnoreCase))
-            {
-                _databasePathOverride = value;
-                _initialized = false;
-            }
-        }
-    }
-
-    private static string DatabasePath
-    {
-        get
-        {
-            var overridePath = DatabasePathOverride;
-            if (!string.IsNullOrEmpty(overridePath))
-            {
-                var overrideDir = Path.GetDirectoryName(overridePath);
-                if (!string.IsNullOrEmpty(overrideDir))
-                {
-                    Directory.CreateDirectory(overrideDir);
-                }
-
-                return overridePath;
-            }
-
-            var plugin = Plugin.Instance;
-            if (plugin is null)
-            {
-                throw new InvalidOperationException("Jellydash plugin instance is not initialized.");
-            }
-
-            var dataPath = plugin.ApplicationPaths.DataPath;
-            var pluginDir = Path.Combine(dataPath, "plugins", "Jellydash");
-            Directory.CreateDirectory(pluginDir);
-            return Path.Combine(pluginDir, "jellydash.db");
-        }
-    }
-
-    private static string ConnectionString => $"Data Source={DatabasePath};Cache=Shared";
-
-    private static string MigrationFolderPath
-    {
-        get
-        {
-            var assemblyLocation = typeof(HistoryRepository).Assembly.Location;
-            var assemblyDir = Path.GetDirectoryName(assemblyLocation)
-                ?? throw new InvalidOperationException("Unable to determine plugin assembly directory.");
-
-            return Path.Combine(assemblyDir, "Migrations");
-        }
-    }
-
-    private static async Task EnsureInitializedAsync(CancellationToken cancellationToken)
-    {
-        if (_initialized)
-        {
-            return;
-        }
-
-        await InitLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            if (_initialized)
-            {
-                return;
-            }
-
-            await InitializeDatabaseAsync(cancellationToken).ConfigureAwait(false);
-            _initialized = true;
-        }
-        finally
-        {
-            InitLock.Release();
-        }
-    }
-
-    private static async Task InitializeDatabaseAsync(CancellationToken cancellationToken)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(DatabasePath)!);
-
-        using var connection = new SqliteConnection(ConnectionString);
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-
-        // Read current schema version.
-        using var pragmaCmd = connection.CreateCommand();
-        pragmaCmd.CommandText = "PRAGMA user_version;";
-        var result = await pragmaCmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-        var version = Convert.ToInt32(result, CultureInfo.InvariantCulture);
-
-        var currentVersion = version;
-
-        foreach (var (migrationVersion, scriptPath) in MigrationScripts)
-        {
-            if (migrationVersion <= currentVersion)
-            {
-                continue;
-            }
-
-            await ApplyMigrationFromFileAsync(connection, migrationVersion, scriptPath, cancellationToken).ConfigureAwait(false);
-            currentVersion = migrationVersion;
-        }
-    }
+    private readonly DatabaseHelper _databaseHelper = databaseHelper;
 
     /// <summary>
     /// Retrieves a page of history entries ordered from most recent to oldest.
@@ -144,14 +30,12 @@ public sealed class HistoryRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A tuple containing the entries and paging state.</returns>
     public async Task<(IReadOnlyList<HistoryEntry> Entries, long? LastId, DateTime? LastEndUtc)> GetPageAsync(
-        int limit,
-        long? beforeId,
-        DateTime? beforeEndUtc,
-        CancellationToken cancellationToken)
+          int limit,
+          long? beforeId,
+          DateTime? beforeEndUtc,
+          CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
-
-        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
 
         await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -160,7 +44,7 @@ public sealed class HistoryRepository
             long? lastId = null;
             DateTime? lastEndUtc = null;
 
-            using var connection = new SqliteConnection(ConnectionString);
+            using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
             using var cmd = connection.CreateCommand();
@@ -335,53 +219,6 @@ LIMIT $limit;";
         }
     }
 
-    private static IReadOnlyList<(int Version, string Path)> LoadMigrationScripts()
-    {
-        if (!Directory.Exists(MigrationFolderPath))
-        {
-            return Array.Empty<(int, string)>();
-        }
-
-        var files = Directory.GetFiles(MigrationFolderPath, "*.sql", SearchOption.TopDirectoryOnly);
-        var list = new List<(int Version, string Path)>();
-
-        foreach (var file in files)
-        {
-            var name = Path.GetFileNameWithoutExtension(file); // e.g. 001_Initial
-            var underscoreIndex = name.IndexOf('_', StringComparison.Ordinal);
-            var versionPart = underscoreIndex >= 0 ? name[..underscoreIndex] : name;
-
-            if (int.TryParse(versionPart, NumberStyles.Integer, CultureInfo.InvariantCulture, out var version))
-            {
-                list.Add((version, file));
-            }
-        }
-
-        list.Sort((a, b) => a.Version.CompareTo(b.Version));
-
-        return list;
-    }
-
-    private static async Task ApplyMigrationFromFileAsync(SqliteConnection connection, int targetVersion, string scriptPath, CancellationToken cancellationToken)
-    {
-        var sql = await File.ReadAllTextAsync(scriptPath, cancellationToken).ConfigureAwait(false);
-
-        var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-
-        using var cmd = connection.CreateCommand();
-        cmd.Transaction = transaction;
-
-#pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
-        cmd.CommandText = sql;
-        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-
-        cmd.CommandText = "PRAGMA user_version = " + targetVersion.ToString(CultureInfo.InvariantCulture) + ";";
-        await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-#pragma warning restore CA2100
-
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-    }
-
     /// <summary>
     /// Appends a history entry to the store.
     /// </summary>
@@ -390,12 +227,10 @@ LIMIT $limit;";
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task AppendAsync(HistoryEntry entry, CancellationToken cancellationToken)
     {
-        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
-
         await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            using var connection = new SqliteConnection(ConnectionString);
+            using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
             using var cmd = connection.CreateCommand();
@@ -520,14 +355,12 @@ INSERT INTO HistoryEntries (
     /// <returns>A list of recent history entries.</returns>
     public async Task<IReadOnlyList<HistoryEntry>> GetRecentAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
     {
-        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
-
         await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var results = new List<HistoryEntry>();
 
-            using var connection = new SqliteConnection(ConnectionString);
+            using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
             using var cmd = connection.CreateCommand();
@@ -652,12 +485,10 @@ ORDER BY EndUtc DESC;";
     /// <returns>The number of removed entries.</returns>
     public async Task<int> DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
     {
-        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
-
         await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            using var connection = new SqliteConnection(ConnectionString);
+            using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
             using var cmd = connection.CreateCommand();

@@ -19,7 +19,7 @@ namespace Jellyfin.Plugin.Jellydash.Events;
 public class PlaybackHistoryLogger : IEventConsumer<PlaybackStartEventArgs>, IEventConsumer<PlaybackStopEventArgs>
 {
     private readonly ILogger<PlaybackHistoryLogger> _logger;
-    private readonly HistoryRepository _repository = new();
+    private readonly HistoryRepository _repository;
 
     // Track the start of each play session so we can compute contiguous spans.
     private static readonly ConcurrentDictionary<string, HistorySeed> Seeds = new(StringComparer.Ordinal);
@@ -28,9 +28,11 @@ public class PlaybackHistoryLogger : IEventConsumer<PlaybackStartEventArgs>, IEv
     /// Initializes a new instance of the <see cref="PlaybackHistoryLogger"/> class.
     /// </summary>
     /// <param name="logger">Logger instance.</param>
-    public PlaybackHistoryLogger(ILogger<PlaybackHistoryLogger> logger)
+    /// <param name="databaseHelper">DatabaseHelper instance.</param>
+    public PlaybackHistoryLogger(ILogger<PlaybackHistoryLogger> logger, DatabaseHelper databaseHelper)
     {
         _logger = logger;
+        _repository = new HistoryRepository(databaseHelper);
     }
 
     /// <inheritdoc />

@@ -1,44 +1,28 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Jellydash.Events;
-using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
-using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
 
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
 [Collection("JellydashPluginTests")]
 public sealed class PlaybackHistoryLoggerTests
 {
-    private static readonly string DatabasePath;
+    private static readonly DatabaseHelper DatabaseHelper;
 
     static PlaybackHistoryLoggerTests()
     {
-        if (string.IsNullOrEmpty(HistoryRepository.DatabasePathOverride))
-        {
-            var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
-            Directory.CreateDirectory(tempDir);
-            DatabasePath = Path.Combine(tempDir, "history_playback.db");
-            HistoryRepository.DatabasePathOverride = DatabasePath;
-        }
-        else
-        {
-            DatabasePath = HistoryRepository.DatabasePathOverride;
-        }
+        var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
+        Directory.CreateDirectory(tempDir);
+        DatabaseHelper = new DatabaseHelper(tempDir);
+        DatabaseHelper.Initialize();
     }
 
     private static HistoryRepository CreateRepository()
     {
-        var repo = new HistoryRepository();
+        var repo = new HistoryRepository(DatabaseHelper);
         repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None).GetAwaiter().GetResult();
         return repo;
     }
@@ -46,7 +30,7 @@ public sealed class PlaybackHistoryLoggerTests
     private static PlaybackHistoryLogger CreateLogger()
     {
         var logger = Mock.Of<ILogger<PlaybackHistoryLogger>>();
-        return new PlaybackHistoryLogger(logger);
+        return new PlaybackHistoryLogger(logger, DatabaseHelper);
     }
 
     [Fact]
@@ -117,7 +101,7 @@ public sealed class PlaybackHistoryLoggerTests
 
     private static PlaybackStartEventArgs CreatePlaybackStartEventArgs(Guid userId, Guid itemId, BaseItemKind kind, long runtimeTicks, long startPositionTicks)
     {
-        var user = new Jellyfin.Database.Implementations.Entities.User("User", "auth", "reset")
+        var user = new Database.Implementations.Entities.User("User", "auth", "reset")
         {
             Id = userId
         };
@@ -134,7 +118,7 @@ public sealed class PlaybackHistoryLoggerTests
 
         return new PlaybackStartEventArgs
         {
-            Users = new List<Jellyfin.Database.Implementations.Entities.User> { user },
+            Users = new List<Database.Implementations.Entities.User> { user },
             MediaInfo = media,
             PlaybackPositionTicks = startPositionTicks,
             PlaySessionId = "session-1",
@@ -145,7 +129,7 @@ public sealed class PlaybackHistoryLoggerTests
 
     private static PlaybackStopEventArgs CreatePlaybackStopEventArgs(Guid userId, Guid itemId, BaseItemKind kind, long runtimeTicks, long positionTicks, string? playSessionId)
     {
-        var user = new Jellyfin.Database.Implementations.Entities.User("User", "auth", "reset")
+        var user = new Database.Implementations.Entities.User("User", "auth", "reset")
         {
             Id = userId
         };
@@ -162,7 +146,7 @@ public sealed class PlaybackHistoryLoggerTests
 
         return new PlaybackStopEventArgs
         {
-            Users = new List<Jellyfin.Database.Implementations.Entities.User> { user },
+            Users = new List<Database.Implementations.Entities.User> { user },
             MediaInfo = media,
             PlaybackPositionTicks = positionTicks,
             PlaySessionId = playSessionId,
