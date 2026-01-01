@@ -1,7 +1,3 @@
-using System;
-using System.IO;
-using Xunit;
-
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
 /// <summary>
