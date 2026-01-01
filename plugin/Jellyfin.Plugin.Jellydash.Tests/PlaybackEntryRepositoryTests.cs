@@ -4,11 +4,11 @@ using Jellyfin.Plugin.Jellydash.Services;
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
 [Collection("JellydashPluginTests")]
-public class HistoryRepositoryTests
+public class PlaybackEntryRepositoryTests
 {
     private static readonly DatabaseHelper DatabaseHelper;
 
-    static HistoryRepositoryTests()
+    static PlaybackEntryRepositoryTests()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
         Directory.CreateDirectory(tempDir);
@@ -19,7 +19,7 @@ public class HistoryRepositoryTests
     [Fact]
     public async Task GetPageAsync_ReturnsMostRecentFirst_AndSupportsCursor()
     {
-        var repository = new HistoryRepository(DatabaseHelper);
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
         var cancellationToken = CancellationToken.None;
 
         // Ensure a clean database.
@@ -44,7 +44,7 @@ public class HistoryRepositoryTests
     [Fact]
     public async Task DeleteOlderThanAsync_RemovesOnlyEntriesBeforeCutoff()
     {
-        var repository = new HistoryRepository(DatabaseHelper);
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
         var cancellationToken = CancellationToken.None;
 
         // Ensure a clean database.
@@ -57,7 +57,7 @@ public class HistoryRepositoryTests
         await repository.AppendAsync(older, cancellationToken);
         await repository.AppendAsync(newer, cancellationToken);
 
-        var cutoff = newer.EndUtc.AddHours(-1);
+        var cutoff = newer.EndUtc!.Value.AddHours(-1);
         var removed = await repository.DeleteOlderThanAsync(cutoff, cancellationToken);
         Assert.Equal(1, removed);
 
@@ -69,7 +69,7 @@ public class HistoryRepositoryTests
     [Fact]
     public async Task GetRecentAsync_ReturnsEntriesOnOrAfterCutoff()
     {
-        var repository = new HistoryRepository(DatabaseHelper);
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
         var cancellationToken = CancellationToken.None;
 
         // Ensure a clean database.
@@ -84,22 +84,24 @@ public class HistoryRepositoryTests
         await repository.AppendAsync(cutoffEntry, cancellationToken);
         await repository.AppendAsync(newer, cancellationToken);
 
-        var cutoff = cutoffEntry.EndUtc;
+        var cutoff = cutoffEntry.EndUtc!.Value;
         var recent = await repository.GetRecentAsync(cutoff, cancellationToken);
 
         Assert.Equal(2, recent.Count);
         Assert.True(recent.All(e => e.EndUtc >= cutoff));
     }
 
-    private static HistoryEntry CreateEntry(DateTime startUtc, DateTime endUtc)
+    private static PlaybackEntry CreateEntry(DateTime startUtc, DateTime endUtc)
     {
-        return new HistoryEntry
+        return new PlaybackEntry
         {
+            ItemId = Guid.NewGuid(),
+            ContentKind = ContentKind.Movie,
+            DisplayTitle = "Item",
             UserId = Guid.NewGuid(),
             UserName = "User",
-            ItemId = Guid.NewGuid(),
-            MediaType = "Movie",
-            ItemName = "Item",
+            ClientName = "TestClient",
+            DeviceName = "TestDevice",
             StartUtc = startUtc,
             EndUtc = endUtc,
             StartPercentage = 0,
