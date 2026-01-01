@@ -11,27 +11,27 @@ namespace Jellyfin.Plugin.Jellydash.ScheduledTasks;
 /// <summary>
 /// Scheduled task that prunes historical Jellydash entries older than the configured retention window.
 /// </summary>
-public sealed class JellydashHistoryCleanupTask : IScheduledTask
+public sealed class JellydashActivityCleanupTask : IScheduledTask
 {
-    private readonly HistoryRepository _historyRepository;
+    private readonly ActivityRepository _activityRepository;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="JellydashHistoryCleanupTask"/> class.
+    /// Initializes a new instance of the <see cref="JellydashActivityCleanupTask"/> class.
     /// </summary>
-    /// <param name="historyRepository">The history repository.</param>
-    public JellydashHistoryCleanupTask(HistoryRepository historyRepository)
+    /// <param name="activityRepository">The activity repository.</param>
+    public JellydashActivityCleanupTask(ActivityRepository activityRepository)
     {
-        _historyRepository = historyRepository;
+        _activityRepository = activityRepository;
     }
 
     /// <inheritdoc />
-    public string Name => "Jellydash history cleanup";
+    public string Name => "Jellydash activity cleanup";
 
     /// <inheritdoc />
-    public string Key => "JellydashHistoryCleanup";
+    public string Key => "JellydashActivityCleanup";
 
     /// <inheritdoc />
-    public string Description => "Removes Jellydash history entries older than the configured retention window.";
+    public string Description => "Removes Jellydash activity entries older than the configured retention window.";
 
     /// <inheritdoc />
     public string Category => "Jellydash";
@@ -58,7 +58,7 @@ public sealed class JellydashHistoryCleanupTask : IScheduledTask
             return;
         }
 
-        var retentionDays = config.HistoryRetentionDays;
+        var retentionDays = config.ActivityRetentionDays;
         if (retentionDays <= 0)
         {
             retentionDays = 30;
@@ -67,7 +67,7 @@ public sealed class JellydashHistoryCleanupTask : IScheduledTask
         var retention = TimeSpan.FromDays(retentionDays);
         var cutoffUtc = DateTime.UtcNow - retention;
 
-        var removed = await _historyRepository
+        var removed = await _activityRepository
             .DeleteOlderThanAsync(cutoffUtc, cancellationToken)
             .ConfigureAwait(false);
 

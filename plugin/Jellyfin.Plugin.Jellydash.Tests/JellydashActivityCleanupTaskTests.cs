@@ -5,20 +5,20 @@ using Jellyfin.Plugin.Jellydash.Services;
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
 [Collection("JellydashPluginTests")]
-public sealed class JellydashHistoryCleanupTaskTests : IDisposable
+public sealed class JellydashActivityCleanupTaskTests : IDisposable
 {
     private readonly Plugin? _originalPluginInstance;
     private readonly DatabaseHelper DatabaseHelper;
 
-    public JellydashHistoryCleanupTaskTests()
+    public JellydashActivityCleanupTaskTests()
     {
         // Preserve any existing plugin instance so we can restore it.
         _originalPluginInstance = Plugin.Instance;
 
-        // Ensure the history repository uses the same temp db path as other tests.
+        // Ensure the activity repository uses the same temp db path as other tests.
         var tempRoot = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
         Directory.CreateDirectory(tempRoot);
-        DatabaseHelper = new DatabaseHelper(Path.Combine(tempRoot, "history_cleanup.db"));
+        DatabaseHelper = new DatabaseHelper(Path.Combine(tempRoot, "activity_cleanup.db"));
         DatabaseHelper.Initialize();
     }
 
@@ -37,8 +37,8 @@ public sealed class JellydashHistoryCleanupTaskTests : IDisposable
         Plugin? pluginBefore = Plugin.Instance;
         typeof(Plugin).GetProperty("Instance")!.SetValue(null, null);
 
-        var repo = new HistoryRepository(DatabaseHelper);
-        var task = new JellydashHistoryCleanupTask(repo);
+        var repo = new ActivityRepository(DatabaseHelper);
+        var task = new JellydashActivityCleanupTask(repo);
 
         var progress = new TestProgress();
 
@@ -56,17 +56,17 @@ public sealed class JellydashHistoryCleanupTaskTests : IDisposable
     public async Task ExecuteAsync_RetentionDisabled_DoesNotDelete()
     {
         // Arrange
-        var repo = new HistoryRepository(DatabaseHelper);
+        var repo = new ActivityRepository(DatabaseHelper);
         await SeedSingleEntryAsync(repo);
 
         var fakePlugin = new FakePlugin(new PluginConfiguration
         {
             EnableRetention = false,
-            HistoryRetentionDays = 30
+            ActivityRetentionDays = 30
         });
         typeof(Plugin).GetProperty("Instance")!.SetValue(null, fakePlugin);
 
-        var task = new JellydashHistoryCleanupTask(repo);
+        var task = new JellydashActivityCleanupTask(repo);
         var progress = new TestProgress();
 
         var beforeEntries = await repo.GetRecentAsync(DateTime.MinValue, CancellationToken.None);
@@ -84,7 +84,7 @@ public sealed class JellydashHistoryCleanupTaskTests : IDisposable
     public async Task ExecuteAsync_RetentionEnabled_DeletesOldEntries()
     {
         // Arrange
-        var repo = new HistoryRepository(DatabaseHelper);
+        var repo = new ActivityRepository(DatabaseHelper);
 
         // One very old entry and one recent entry.
         await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-60));
@@ -93,11 +93,11 @@ public sealed class JellydashHistoryCleanupTaskTests : IDisposable
         var fakePlugin = new FakePlugin(new PluginConfiguration
         {
             EnableRetention = true,
-            HistoryRetentionDays = 30
+            ActivityRetentionDays = 30
         });
         typeof(Plugin).GetProperty("Instance")!.SetValue(null, fakePlugin);
 
-        var task = new JellydashHistoryCleanupTask(repo);
+        var task = new JellydashActivityCleanupTask(repo);
         var progress = new TestProgress();
 
         // Act
@@ -110,15 +110,15 @@ public sealed class JellydashHistoryCleanupTaskTests : IDisposable
         Assert.Equal(1.0, progress.Value);
     }
 
-    private static async Task SeedSingleEntryAsync(HistoryRepository repo)
+    private static async Task SeedSingleEntryAsync(ActivityRepository repo)
     {
         await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-1));
     }
 
-    private static async Task SeedEntryAsync(HistoryRepository repo, DateTime endUtc)
+    private static async Task SeedEntryAsync(ActivityRepository repo, DateTime endUtc)
     {
         var startUtc = endUtc.AddMinutes(-10);
-        var entry = new Models.HistoryEntry
+        var entry = new Models.Activity
         {
             UserId = Guid.NewGuid(),
             UserName = "User",

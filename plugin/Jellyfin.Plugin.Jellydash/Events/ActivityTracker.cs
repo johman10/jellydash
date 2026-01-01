@@ -14,25 +14,25 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.Jellydash.Events;
 
 /// <summary>
-/// Records Jellydash history entries when playback starts and stops.
+/// Records Jellydash activities when playback starts and stops.
 /// </summary>
-public class PlaybackHistoryLogger : IEventConsumer<PlaybackStartEventArgs>, IEventConsumer<PlaybackStopEventArgs>
+public class ActivityTracker : IEventConsumer<PlaybackStartEventArgs>, IEventConsumer<PlaybackStopEventArgs>
 {
-    private readonly ILogger<PlaybackHistoryLogger> _logger;
-    private readonly HistoryRepository _repository;
+    private readonly ILogger<ActivityTracker> _logger;
+    private readonly ActivityRepository _repository;
 
     // Track the start of each play session so we can compute contiguous spans.
-    private static readonly ConcurrentDictionary<string, HistorySeed> Seeds = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, ActivitySeed> Seeds = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PlaybackHistoryLogger"/> class.
+    /// Initializes a new instance of the <see cref="ActivityTracker"/> class.
     /// </summary>
     /// <param name="logger">Logger instance.</param>
     /// <param name="databaseHelper">DatabaseHelper instance.</param>
-    public PlaybackHistoryLogger(ILogger<PlaybackHistoryLogger> logger, DatabaseHelper databaseHelper)
+    public ActivityTracker(ILogger<ActivityTracker> logger, DatabaseHelper databaseHelper)
     {
         _logger = logger;
-        _repository = new HistoryRepository(databaseHelper);
+        _repository = new ActivityRepository(databaseHelper);
     }
 
     /// <inheritdoc />
@@ -69,7 +69,7 @@ public class PlaybackHistoryLogger : IEventConsumer<PlaybackStartEventArgs>, IEv
 
             var transcodeInfo = eventArgs.Session?.TranscodingInfo;
 
-            var seed = new HistorySeed
+            var seed = new ActivitySeed
             {
                 UserId = user.Id,
                 UserName = user.Username,
@@ -99,7 +99,7 @@ public class PlaybackHistoryLogger : IEventConsumer<PlaybackStartEventArgs>, IEv
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling playback start event for Jellydash history.");
+            _logger.LogError(ex, "Error handling playback start event for Jellydash activity.");
         }
 
         return Task.CompletedTask;
@@ -135,7 +135,7 @@ public class PlaybackHistoryLogger : IEventConsumer<PlaybackStartEventArgs>, IEv
             if (!Seeds.TryRemove(key, out var seed))
             {
                 // If we never saw a start, treat the span as beginning at the current position.
-                seed = new HistorySeed
+                seed = new ActivitySeed
                 {
                     UserId = eventArgs.Users[0].Id,
                     UserName = eventArgs.Users[0].Username,
@@ -166,7 +166,7 @@ public class PlaybackHistoryLogger : IEventConsumer<PlaybackStartEventArgs>, IEv
                 endPercent = (double)endTicks / runtimeTicks.Value * 100.0;
             }
 
-            var entry = new HistoryEntry
+            var entry = new Activity
             {
                 UserId = seed.UserId,
                 UserName = seed.UserName,
@@ -207,7 +207,7 @@ public class PlaybackHistoryLogger : IEventConsumer<PlaybackStartEventArgs>, IEv
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling playback stop event for Jellydash history.");
+            _logger.LogError(ex, "Error handling playback stop event for Jellydash activity.");
         }
     }
 
@@ -232,7 +232,7 @@ public class PlaybackHistoryLogger : IEventConsumer<PlaybackStartEventArgs>, IEv
         return null;
     }
 
-    private sealed class HistorySeed
+    private sealed class ActivitySeed
     {
         public Guid UserId { get; set; }
 

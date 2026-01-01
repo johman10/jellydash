@@ -18,27 +18,27 @@ public sealed class JellydashControllerTests
         DatabaseHelper.Initialize();
     }
 
-    private static HistoryRepository CreateRepository()
+    private static ActivityRepository CreateRepository()
     {
-        var repo = new HistoryRepository(DatabaseHelper);
+        var repo = new ActivityRepository(DatabaseHelper);
         repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None).GetAwaiter().GetResult();
         return repo;
     }
 
     [Fact]
-    public async Task GetHistory_InvalidCursor_ReturnsBadRequest()
+    public async Task GetActivity_InvalidCursor_ReturnsBadRequest()
     {
         var repo = CreateRepository();
         var controller = new JellydashController(repo);
 
-        var result = await controller.GetHistory(null, "not-a-valid-cursor", CancellationToken.None);
+        var result = await controller.GetActivity(null, "not-a-valid-cursor", CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Invalid cursor.", badRequest.Value);
     }
 
     [Fact]
-    public async Task GetHistory_RespectsDefaultLimitAndOrdering()
+    public async Task GetActivity_RespectsDefaultLimitAndOrdering()
     {
         var repo = CreateRepository();
 
@@ -48,7 +48,7 @@ public sealed class JellydashControllerTests
         {
             var endUtc = now.AddMinutes(i);
             var startUtc = endUtc.AddMinutes(-10);
-            var entry = new HistoryEntry
+            var entry = new Activity
             {
                 UserId = Guid.NewGuid(),
                 UserName = "User",
@@ -66,7 +66,7 @@ public sealed class JellydashControllerTests
 
         var controller = new JellydashController(repo);
 
-        var result = await controller.GetHistory(null, null, CancellationToken.None);
+        var result = await controller.GetActivity(null, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
     var items = GetItems(ok);
@@ -78,7 +78,7 @@ public sealed class JellydashControllerTests
     }
 
     [Fact]
-    public async Task GetHistory_UsesCursorForPaging()
+    public async Task GetActivity_UsesCursorForPaging()
     {
         var repo = CreateRepository();
 
@@ -87,7 +87,7 @@ public sealed class JellydashControllerTests
         {
             var endUtc = now.AddMinutes(i);
             var startUtc = endUtc.AddMinutes(-10);
-            var entry = new HistoryEntry
+            var entry = new Activity
             {
                 UserId = Guid.NewGuid(),
                 UserName = "User",
@@ -106,7 +106,7 @@ public sealed class JellydashControllerTests
         var controller = new JellydashController(repo);
 
         // First page with explicit small limit.
-        var firstResult = await controller.GetHistory(2, null, CancellationToken.None);
+        var firstResult = await controller.GetActivity(2, null, CancellationToken.None);
         var firstOk = Assert.IsType<OkObjectResult>(firstResult);
     var firstItems = GetItems(firstOk);
     var firstCursor = GetNextCursor(firstOk);
@@ -115,7 +115,7 @@ public sealed class JellydashControllerTests
         Assert.False(string.IsNullOrEmpty(firstCursor));
 
         // Second page using cursor.
-        var secondResult = await controller.GetHistory(2, firstCursor, CancellationToken.None);
+        var secondResult = await controller.GetActivity(2, firstCursor, CancellationToken.None);
         var secondOk = Assert.IsType<OkObjectResult>(secondResult);
         var secondItems = GetItems(secondOk);
         var secondCursor = GetNextCursor(secondOk);
@@ -131,13 +131,13 @@ public sealed class JellydashControllerTests
         Assert.False(string.IsNullOrEmpty(secondCursor));
     }
 
-    private static List<HistoryEntry> GetItems(OkObjectResult ok)
+    private static List<Activity> GetItems(OkObjectResult ok)
     {
         var value = ok.Value ?? throw new InvalidOperationException("Result value is null.");
         var itemsProperty = value.GetType().GetProperty("items");
         Assert.NotNull(itemsProperty);
         var itemsObj = itemsProperty!.GetValue(value);
-        var itemsEnumerable = Assert.IsAssignableFrom<IEnumerable<HistoryEntry>>(itemsObj);
+        var itemsEnumerable = Assert.IsAssignableFrom<IEnumerable<Activity>>(itemsObj);
         return itemsEnumerable.ToList();
     }
 

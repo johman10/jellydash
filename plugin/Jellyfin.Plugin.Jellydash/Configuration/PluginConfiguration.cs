@@ -12,15 +12,15 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public PluginConfiguration()
     {
-        HistoryRetentionDays = 30;
+        ActivityRetentionDays = 30;
         EnableRetention = true;
         TrackDownloads = true;
     }
 
     /// <summary>
-    /// Gets or sets the history retention period in days.
+    /// Gets or sets the activity retention period in days.
     /// </summary>
-    public int HistoryRetentionDays { get; set; }
+    public int ActivityRetentionDays { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether retention-based cleanup is enabled.

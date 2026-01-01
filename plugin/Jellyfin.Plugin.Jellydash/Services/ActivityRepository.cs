@@ -13,10 +13,10 @@ namespace Jellyfin.Plugin.Jellydash.Services;
 /// SQLite-backed repository for Jellydash history entries.
 /// </summary>
 /// <remarks>
-/// Initializes a new instance of the <see cref="HistoryRepository"/> class.
+/// Initializes a new instance of the <see cref="ActivityRepository"/> class.
 /// </remarks>
 /// <param name="databaseHelper">An instance of DatabaseHelper.</param>
-public sealed class HistoryRepository(DatabaseHelper databaseHelper)
+public sealed class ActivityRepository(DatabaseHelper databaseHelper)
 {
     private static readonly SemaphoreSlim DbLock = new(1, 1);
     private readonly DatabaseHelper _databaseHelper = databaseHelper;
@@ -29,7 +29,7 @@ public sealed class HistoryRepository(DatabaseHelper databaseHelper)
     /// <param name="beforeEndUtc">Optional end time of the last entry from the previous page.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A tuple containing the entries and paging state.</returns>
-    public async Task<(IReadOnlyList<HistoryEntry> Entries, long? LastId, DateTime? LastEndUtc)> GetPageAsync(
+    public async Task<(IReadOnlyList<Activity> Entries, long? LastId, DateTime? LastEndUtc)> GetPageAsync(
           int limit,
           long? beforeId,
           DateTime? beforeEndUtc,
@@ -40,7 +40,7 @@ public sealed class HistoryRepository(DatabaseHelper databaseHelper)
         await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var results = new List<HistoryEntry>(limit);
+            var results = new List<Activity>(limit);
             long? lastId = null;
             DateTime? lastEndUtc = null;
 
@@ -87,7 +87,7 @@ SELECT
     TranscodeAudioCodec,
     TranscodeContainer,
     TranscodeHardwareAcceleration
-FROM HistoryEntries
+FROM Activities
 WHERE (EndUtc < $cursorEndUtc)
    OR (EndUtc = $cursorEndUtc AND Id < $cursorId)
 ORDER BY EndUtc DESC, Id DESC
@@ -134,7 +134,7 @@ SELECT
     TranscodeAudioCodec,
     TranscodeContainer,
     TranscodeHardwareAcceleration
-FROM HistoryEntries
+FROM Activities
 ORDER BY EndUtc DESC, Id DESC
 LIMIT $limit;";
             }
@@ -169,7 +169,7 @@ LIMIT $limit;";
                 var isTranscodeContainerNull = await reader.IsDBNullAsync(32, cancellationToken).ConfigureAwait(false);
                 var isTranscodeHwNull = await reader.IsDBNullAsync(33, cancellationToken).ConfigureAwait(false);
 
-                var entry = new HistoryEntry
+                var entry = new Activity
                 {
                     UserId = Guid.Parse(reader.GetString(1)),
                     UserName = reader.GetString(2),
@@ -225,7 +225,7 @@ LIMIT $limit;";
     /// <param name="entry">The entry to store.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task AppendAsync(HistoryEntry entry, CancellationToken cancellationToken)
+    public async Task AppendAsync(Activity entry, CancellationToken cancellationToken)
     {
         await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -235,7 +235,7 @@ LIMIT $limit;";
 
             using var cmd = connection.CreateCommand();
             cmd.CommandText = @"
-INSERT INTO HistoryEntries (
+INSERT INTO Activities (
     UserId,
     UserName,
     UserImageUrl,
@@ -353,12 +353,12 @@ INSERT INTO HistoryEntries (
     /// <param name="cutoffUtc">UTC cutoff time.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A list of recent history entries.</returns>
-    public async Task<IReadOnlyList<HistoryEntry>> GetRecentAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Activity>> GetRecentAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
     {
         await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var results = new List<HistoryEntry>();
+            var results = new List<Activity>();
 
             using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
@@ -399,7 +399,7 @@ SELECT
     TranscodeAudioCodec,
     TranscodeContainer,
     TranscodeHardwareAcceleration
-FROM HistoryEntries
+FROM Activities
 WHERE EndUtc >= $cutoffUtc
 ORDER BY EndUtc DESC;";
 
@@ -429,7 +429,7 @@ ORDER BY EndUtc DESC;";
                 var isTranscodeContainerNull = await reader.IsDBNullAsync(31, cancellationToken).ConfigureAwait(false);
                 var isTranscodeHwNull = await reader.IsDBNullAsync(32, cancellationToken).ConfigureAwait(false);
 
-                var entry = new HistoryEntry
+                var entry = new Activity
                 {
                     UserId = Guid.Parse(reader.GetString(0)),
                     UserName = reader.GetString(1),
@@ -492,7 +492,7 @@ ORDER BY EndUtc DESC;";
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "DELETE FROM HistoryEntries WHERE EndUtc < $cutoffUtc;";
+            cmd.CommandText = "DELETE FROM Activities WHERE EndUtc < $cutoffUtc;";
             AddParameter(cmd, "$cutoffUtc", cutoffUtc.ToString("O", CultureInfo.InvariantCulture));
 
             var removed = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);

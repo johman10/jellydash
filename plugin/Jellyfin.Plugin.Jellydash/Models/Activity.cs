@@ -5,7 +5,7 @@ namespace Jellyfin.Plugin.Jellydash.Models;
 /// <summary>
 /// Represents a single contiguous playback or download span for a media item.
 /// </summary>
-public class HistoryEntry
+public class Activity
 {
     /// <summary>
     /// Gets or sets the Jellyfin user id associated with this entry.

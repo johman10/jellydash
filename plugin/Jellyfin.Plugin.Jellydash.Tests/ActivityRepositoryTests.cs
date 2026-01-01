@@ -4,11 +4,11 @@ using Jellyfin.Plugin.Jellydash.Services;
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
 [Collection("JellydashPluginTests")]
-public class HistoryRepositoryTests
+public class ActivityRepositoryTests
 {
     private static readonly DatabaseHelper DatabaseHelper;
 
-    static HistoryRepositoryTests()
+    static ActivityRepositoryTests()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
         Directory.CreateDirectory(tempDir);
@@ -19,7 +19,7 @@ public class HistoryRepositoryTests
     [Fact]
     public async Task GetPageAsync_ReturnsMostRecentFirst_AndSupportsCursor()
     {
-        var repository = new HistoryRepository(DatabaseHelper);
+        var repository = new ActivityRepository(DatabaseHelper);
         var cancellationToken = CancellationToken.None;
 
         // Ensure a clean database.
@@ -44,7 +44,7 @@ public class HistoryRepositoryTests
     [Fact]
     public async Task DeleteOlderThanAsync_RemovesOnlyEntriesBeforeCutoff()
     {
-        var repository = new HistoryRepository(DatabaseHelper);
+        var repository = new ActivityRepository(DatabaseHelper);
         var cancellationToken = CancellationToken.None;
 
         // Ensure a clean database.
@@ -69,7 +69,7 @@ public class HistoryRepositoryTests
     [Fact]
     public async Task GetRecentAsync_ReturnsEntriesOnOrAfterCutoff()
     {
-        var repository = new HistoryRepository(DatabaseHelper);
+        var repository = new ActivityRepository(DatabaseHelper);
         var cancellationToken = CancellationToken.None;
 
         // Ensure a clean database.
@@ -91,9 +91,9 @@ public class HistoryRepositoryTests
         Assert.True(recent.All(e => e.EndUtc >= cutoff));
     }
 
-    private static HistoryEntry CreateEntry(DateTime startUtc, DateTime endUtc)
+    private static Activity CreateEntry(DateTime startUtc, DateTime endUtc)
     {
-        return new HistoryEntry
+        return new Activity
         {
             UserId = Guid.NewGuid(),
             UserName = "User",

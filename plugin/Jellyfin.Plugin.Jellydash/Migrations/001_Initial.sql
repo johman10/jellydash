@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS HistoryEntries (
+CREATE TABLE IF NOT EXISTS Activities (
     Id                          INTEGER PRIMARY KEY AUTOINCREMENT,
     UserId                      TEXT    NOT NULL,
     UserName                    TEXT    NOT NULL,

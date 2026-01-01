@@ -16,27 +16,27 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
     [ApiController]
     public class JellydashController : ControllerBase
     {
-        private readonly HistoryRepository _historyRepository;
+        private readonly ActivityRepository _activityRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JellydashController"/> class.
         /// </summary>
-        /// <param name="historyRepository">The history repository.</param>
-        public JellydashController(HistoryRepository historyRepository)
+        /// <param name="activityRepository">The activity repository.</param>
+        public JellydashController(ActivityRepository activityRepository)
         {
-            _historyRepository = historyRepository;
+            _activityRepository = activityRepository;
         }
 
         /// <summary>
-        /// Returns a page of recent history entries using cursor-based pagination.
+        /// Returns a page of recent activity entries using cursor-based pagination.
         /// </summary>
         /// <param name="limit">Maximum number of entries to return (max 100, default 20).</param>
         /// <param name="cursor">An opaque cursor returned from a previous page.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>A page of recent history entries and a cursor for the next page, if any.</returns>
-        [HttpGet("history")]
+        /// <returns>A page of recent activity entries and a cursor for the next page, if any.</returns>
+        [HttpGet("activity")]
         [Authorize]
-        public async Task<IActionResult> GetHistory([FromQuery] int? limit, [FromQuery] string? cursor, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetActivity([FromQuery] int? limit, [FromQuery] string? cursor, CancellationToken cancellationToken)
         {
             var pageSize = limit.HasValue && limit.Value > 0 ? Math.Min(limit.Value, 100) : 20;
 
@@ -55,7 +55,7 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
                 }
             }
 
-            var (entries, lastId, lastEndUtc) = await _historyRepository
+            var (entries, lastId, lastEndUtc) = await _activityRepository
                 .GetPageAsync(pageSize, beforeId, beforeEndUtc, cancellationToken)
                 .ConfigureAwait(false);
 
