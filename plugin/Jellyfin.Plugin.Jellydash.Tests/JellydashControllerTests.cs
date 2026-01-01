@@ -1,40 +1,26 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Jellyfin.Plugin.Jellydash.Controllers;
 using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
 using Microsoft.AspNetCore.Mvc;
-using Xunit;
 
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
 [Collection("JellydashPluginTests")]
 public sealed class JellydashControllerTests
 {
-    private static readonly string DatabasePath;
+    private static readonly DatabaseHelper DatabaseHelper;
 
     static JellydashControllerTests()
     {
-        if (string.IsNullOrEmpty(HistoryRepository.DatabasePathOverride))
-        {
-            var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
-            Directory.CreateDirectory(tempDir);
-            DatabasePath = Path.Combine(tempDir, "history_controller.db");
-            HistoryRepository.DatabasePathOverride = DatabasePath;
-        }
-        else
-        {
-            DatabasePath = HistoryRepository.DatabasePathOverride;
-        }
+        var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
+        Directory.CreateDirectory(tempDir);
+        DatabaseHelper = new DatabaseHelper(tempDir);
+        DatabaseHelper.Initialize();
     }
 
     private static HistoryRepository CreateRepository()
     {
-        var repo = new HistoryRepository();
+        var repo = new HistoryRepository(DatabaseHelper);
         repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None).GetAwaiter().GetResult();
         return repo;
     }
