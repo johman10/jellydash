@@ -63,10 +63,10 @@ This will build the plugin and execute the `Jellyfin.Plugin.Jellydash.Tests` xUn
 
 High‑level pieces:
 
-- **Activity model**
-	- `Models/Activity.cs` defines a single contiguous playback span for a user and item.
-	- The schema includes fields for potential download tracking (`IsDownload`, download size/progress) but the current implementation only records playback events.
-	- Fields are chosen to map cleanly onto the Flutter `Session` / `CurrentActivityCard` UI: user id + name, item title/series/season/episode/year, client + device, span start/end, positions and percentages, bitrate, and transcoding flags/codecs.
+- **Playback history model**
+	- `Models/PlaybackEntry.cs` defines a single contiguous playback span for a user and item as it is stored in SQLite.
+	- `Models/PlaybackEntryDto.cs` and related DTOs (for identity, user, client, timing, streams, and transcoding) define the API shape returned to the Jellydash UI.
+	- Fields are chosen to map cleanly onto the Flutter `Session` / `CurrentActivityCard` UI: user id + name, item title/series/season/episode/year, client + device, span start/end, positions and percentages, bitrate, and detailed stream/transcoding information.
 
 - **Event consumers (playback tracking)**
 	- `Events/ActivityTracker.cs` implements:
@@ -75,25 +75,24 @@ High‑level pieces:
 	- On **playback start**:
 		- Filters to supported item types (`Movie`, `Episode`).
 		- Extracts `BaseItemDto` + `PlaybackStartEventArgs` data (user, item, series/season/episode, runtime ticks, starting position, client, device, and transcoding info from the session).
-		- Creates a transient in‑memory `ActivitySeed` keyed by play session (`playSessionId` if available; otherwise `sessionId:itemId`).
+		- Builds an in‑memory `PlaybackEntry` seed keyed by play session (`playSessionId` if available; otherwise `sessionId:itemId`).
 	- On **playback stop**:
-		- Looks up and clears the matching `ActivitySeed` (or synthesizes one if start was missed).
-		- Uses the stop position and runtime ticks to compute `StartPositionTicks`, `EndPositionTicks`, `StartPercentage`, and `EndPercentage`.
-		- Builds an `Activity` that includes all UI‑relevant fields plus bitrate/direct‑stream/transcode details.
-		- Persists the span through the activity repository (see below).
+		- Looks up and clears the matching seed (or synthesizes one if start was missed).
+		- Uses the stop position and runtime ticks to compute `StartPositionTicks`, `EndPositionTicks`, `StartPercentage`, and `EndPercentage`, and determines whether the span is considered completed.
+		- Persists a finalized `PlaybackEntry` through the playback entry repository (see below).
 
-‑ **Activity storage**
-	- `Services/ActivityRepository.cs` is a SQLite‑backed store for `Activity` objects.
+- **Playback storage**
+	- `Services/PlaybackEntryRepository.cs` is a SQLite‑backed store for `PlaybackEntry` records.
 	- Storage format:
 		- Dedicated database file `jellydash.db` under the Jellyfin data path, in `plugins/Jellydash/jellydash.db`.
-		- Schema is managed via versioned SQL migration scripts in `Migrations/` (e.g. `001_Initial.sql`).
+		- Schema is managed via versioned SQL migration scripts in `Migrations/` (e.g. `001_Initial.sql`), with a single `PlaybackEntries` table.
 	- Key operations:
-		- `AppendAsync(Activity)` — append a new span (used by `ActivityTracker`).
-		- `GetPageAsync(int limit, long? beforeId, DateTime? beforeEndUtc, CancellationToken)` — paged, most‑recent‑first query used by the `/Jellydash/activity` endpoint.
+		- `AppendAsync(PlaybackEntry)` — append a new span (used by `ActivityTracker`).
+		- `GetPageAsync(int limit, long? beforeId, DateTime? beforeEndUtc, CancellationToken)` — paged, most‑recent‑first query used by the `/Jellydash/history` endpoint.
 		- `GetRecentAsync(DateTime cutoffUtc, CancellationToken)` — convenience query for entries since a given time.
 		- `DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken)` — delete rows older than the cutoff (used by the scheduled cleanup task).
 	- Concurrency:
-		- Uses static `SemaphoreSlim` guards to ensure DB initialization and access are serialized across threads.
+		- Uses a static `SemaphoreSlim` guard to ensure DB access is serialized across threads.
 	- Migrations:
 		- On startup, reads `PRAGMA user_version` from `jellydash.db` and applies any `.sql` migration scripts with a higher version number, in order, updating `user_version` after each script.
 
@@ -106,25 +105,23 @@ High‑level pieces:
 
 - **Plugin configuration / retention**
 	- `PluginConfiguration` includes settings such as:
-		- `ActivityRetentionDays` — how many days of activity to keep when retention is enabled (default: 30).
-		- `EnableRetention` — whether automatic cleanup is enabled; when disabled, activity is not pruned.
-		- `TrackDownloads` — configuration flag and UI toggle for download activity; the schema supports downloads but the current implementation only records playback spans.
+		- `RetentionDays` — how many days of playback history to keep when retention is enabled (default: 30).
+		- `EnableRetention` — whether automatic cleanup is enabled; when disabled, playback history is not pruned.
 	- The configuration UI (`Configuration/configPage.html`) exposes these settings:
 		- "Enable retention period" checkbox that also enables/disables the days input.
 		- A numeric "History retention (days)" field.
-		- A "Track download activity" checkbox.
 
 - **HTTP endpoints**
 	- `Controllers/JellydashController.cs` exposes:
-		- `GET /Jellydash/activity` — returns a page of recent `Activity` objects using cursor‑based pagination:
+		- `GET /Jellydash/history` — returns a page of recent playback history entries using cursor‑based pagination:
 			- Query parameters: `limit` (max 100, default 20) and optional `cursor`.
-			- Response shape: `{ "items": Activity[], "nextCursor": string | null }`.
+			- Response shape: `{ "items": PlaybackEntryDto[], "nextCursor": string | null }`.
 			- Cursors are opaque Base64 tokens derived from the last entry's `EndUtc` and database id.
-	- Responses return the raw `Activity` model; the Flutter client is responsible for shaping this into its own `Session`/card models.
+	- Responses return the Jellydash‑specific `PlaybackEntryDto` model; the Flutter client can use this directly to drive its `Session`/card models.
 
 - **Scheduled cleanup**
-	- `ScheduledTasks/JellydashActivityCleanupTask.cs` implements `IScheduledTask` and:
+	- `ScheduledTasks/JellydashCleanupTask.cs` implements `IScheduledTask` and:
 		- Runs daily by default around 03:00 server time (via `TaskTriggerInfo`).
 		- Checks `EnableRetention` and exits early when retention is disabled.
-		- Uses `ActivityRetentionDays` to compute `cutoffUtc` and calls `ActivityRepository.DeleteOlderThanAsync` to prune old rows from `jellydash.db`.
-	- This keeps the activity table from growing without bound while respecting the configured retention policy (or leaving all activity intact when retention is disabled).
+		- Uses `RetentionDays` to compute `cutoffUtc` and calls `PlaybackEntryRepository.DeleteOlderThanAsync` to prune old rows from `jellydash.db`.
+	- This keeps the playback history table from growing without bound while respecting the configured retention policy (or leaving all history intact when retention is disabled).
