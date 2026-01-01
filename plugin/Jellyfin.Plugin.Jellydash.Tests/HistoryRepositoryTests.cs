@@ -6,10 +6,9 @@ using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
 using Xunit;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
+[Collection("JellydashPluginTests")]
 public class HistoryRepositoryTests
 {
     private static readonly string DatabasePath;

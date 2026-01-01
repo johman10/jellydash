@@ -1,0 +1,179 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  plugin-build:
+    name: Plugin build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore .NET dependencies
+        working-directory: plugin
+        run: dotnet restore Jellyfin.Plugin.Jellydash.sln
+
+      - name: Build .NET projects
+        working-directory: plugin
+        run: dotnet build Jellyfin.Plugin.Jellydash.sln --configuration Release --no-restore
+
+  plugin-test:
+    name: Plugin tests
+    runs-on: ubuntu-latest
+    needs: plugin-build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore .NET dependencies
+        working-directory: plugin
+        run: dotnet restore Jellyfin.Plugin.Jellydash.sln
+
+      - name: Run .NET tests
+        working-directory: plugin
+        run: dotnet test Jellyfin.Plugin.Jellydash.sln --configuration Release --collect:"XPlat Code Coverage"
+
+  test-flutter:
+    name: Flutter tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Run Flutter tests
+        run: flutter test
+
+  build-flutter-web:
+    name: Build Flutter web
+    runs-on: ubuntu-latest
+    needs: test-flutter
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Flutter web release
+        run: flutter build web --release
+
+  build-flutter-linux:
+    name: Build Flutter Linux
+    runs-on: ubuntu-latest
+    needs: test-flutter
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Enable Linux desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev cmake ninja-build pkg-config liblzma-dev
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Flutter Linux
+        run: flutter build linux --release
+
+  build-flutter-android:
+    name: Build Flutter Android
+    runs-on: ubuntu-latest
+    needs: test-flutter
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Flutter Android APK
+        run: flutter build apk --release
+
+  build-flutter-macos:
+    name: Build Flutter macOS
+    runs-on: macos-latest
+    needs: test-flutter
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Enable macOS desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Flutter macOS
+        run: flutter build macos --release
+
+  build-flutter-ios:
+    name: Build Flutter iOS
+    runs-on: macos-latest
+    needs: test-flutter
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Flutter iOS (no codesign)
+        run: flutter build ios --no-codesign --release

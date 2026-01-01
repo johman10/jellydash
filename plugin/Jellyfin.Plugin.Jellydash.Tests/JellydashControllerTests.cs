@@ -12,6 +12,7 @@ using Xunit;
 
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
+[Collection("JellydashPluginTests")]
 public sealed class JellydashControllerTests
 {
     private static readonly string DatabasePath;
