@@ -9,10 +9,12 @@ using Xunit;
 
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
+[Collection("JellydashPluginTests")]
 public sealed class JellydashHistoryCleanupTaskTests : IDisposable
 {
     private readonly string _originalDbPath;
     private readonly Plugin? _originalPluginInstance;
+    private readonly string _dbPathForTest;
 
     public JellydashHistoryCleanupTaskTests()
     {
@@ -25,7 +27,12 @@ public sealed class JellydashHistoryCleanupTaskTests : IDisposable
         {
             var tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "JellydashPluginTests");
             System.IO.Directory.CreateDirectory(tempRoot);
-            HistoryRepository.DatabasePathOverride = System.IO.Path.Combine(tempRoot, "history_cleanup.db");
+            _dbPathForTest = System.IO.Path.Combine(tempRoot, "history_cleanup.db");
+            HistoryRepository.DatabasePathOverride = _dbPathForTest;
+        }
+        else
+        {
+            _dbPathForTest = HistoryRepository.DatabasePathOverride;
         }
     }
 
@@ -37,6 +44,7 @@ public sealed class JellydashHistoryCleanupTaskTests : IDisposable
             .SetValue(null, _originalPluginInstance);
 
         HistoryRepository.DatabasePathOverride = _originalDbPath;
+
     }
 
     [Fact]

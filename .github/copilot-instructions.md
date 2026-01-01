@@ -14,6 +14,7 @@ Jellydash is a dashboard for [Jellyfin](https://jellyfin.org/), providing a real
 - **Responsiveness**: UI must adapt to various screen sizes and support both light and dark modes.
  - **Activity Cards**: Current activity is rendered via `CurrentActivityCard` inside `CurrentActivities` using responsive Wrap-based columns (no implicit scrolling in these widgets; scrolling is handled by higher-level layouts).
  - **Session Semantics**: Session UI should respect `Session` fields (e.g., `season`/`episode` vs `year`, `isPaused`, `progress`/`duration`, `bitrate`) and avoid showing placeholder or "null"-like values to the user.
+ - **Separation of Concerns**: Keep data fetching, state management, and UI rendering logic separate for maintainability. Also use files to split logic between files and keep naming general when the solution is reusable.
 
 ## Conventions & Workflows
 - **Naming**: Use common flutter conventions (e.g., PascalCase for classes, camelCase for variables).
