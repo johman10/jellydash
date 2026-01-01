@@ -17,17 +17,10 @@
                             </label>
                             <div class="fieldDescription">If enabled, Jellydash will automatically remove activity older than the configured number of days.</div>
                         </div>
-                        <div class="inputContainer activityRetentionDaysInputContainer" style="margin-bottom:1.25em;">
-                            <label class="inputLabel inputLabelUnfocused" for="ActivityRetentionDays">Activity retention (days)</label>
-                            <input id="ActivityRetentionDays" name="ActivityRetentionDays" type="number" is="emby-input" min="1" />
-                            <div class="fieldDescription">How many days Jellydash activity is kept before cleanup.</div>
-                        </div>
-                        <div class="checkboxContainer checkboxContainer-withDescription" style="margin-bottom:1.25em;">
-                            <label class="emby-checkbox-label">
-                                <input id="TrackDownloads" name="TrackDownloads" type="checkbox" is="emby-checkbox" />
-                                <span>Track download activity</span>
-                            </label>
-                            <div class="fieldDescription">If enabled, Jellydash will also record media downloads as activity.</div>
+                        <div class="inputContainer retentionDaysInputContainer" style="margin-bottom:1.25em;">
+                            <label class="inputLabel inputLabelUnfocused" for="RetentionDays">Playback entry retention (days)</label>
+                            <input id="RetentionDays" name="RetentionDays" type="number" is="emby-input" min="1" />
+                            <div class="fieldDescription">How many days Jellydash playback activity is kept before cleanup.</div>
                         </div>
                         <div>
                             <button is="emby-button" type="submit" class="raised button-submit block emby-button">
@@ -45,17 +38,17 @@
 
             function updateRetentionInputs() {
                 var enableRetentionCheckbox = document.querySelector('#EnableRetention');
-                var retentionInput = document.querySelector('#ActivityRetentionDays');
-                var activityRetentionDaysInputContainer = document.querySelector('.activityRetentionDaysInputContainer');
+                var retentionInput = document.querySelector('#RetentionDays');
+                var retentionDaysInputContainer = document.querySelector('.retentionDaysInputContainer');
 
                 var enabled = enableRetentionCheckbox.checked;
                 retentionInput.disabled = !enabled;
                 if (enabled) {
-                    activityRetentionDaysInputContainer.style.opacity = '';
-                    activityRetentionDaysInputContainer.style.cursor = '';
+                    retentionDaysInputContainer.style.opacity = '';
+                    retentionDaysInputContainer.style.cursor = '';
                 } else {
-                    activityRetentionDaysInputContainer.style.opacity = '0.4';
-                    activityRetentionDaysInputContainer.style.cursor = 'not-allowed';
+                    retentionDaysInputContainer.style.opacity = '0.4';
+                    retentionDaysInputContainer.style.cursor = 'not-allowed';
                 }
             }
 
@@ -64,8 +57,7 @@
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(JellydashConfig.pluginUniqueId).then(function (config) {
                         document.querySelector('#EnableRetention').checked = config.EnableRetention === true;
-                        document.querySelector('#ActivityRetentionDays').value = config.ActivityRetentionDays;
-                        document.querySelector('#TrackDownloads').checked = config.TrackDownloads;
+                        document.querySelector('#RetentionDays').value = config.RetentionDays;
 
                         updateRetentionInputs();
 
@@ -83,8 +75,7 @@
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(JellydashConfig.pluginUniqueId).then(function (config) {
                         config.EnableRetention = document.querySelector('#EnableRetention').checked;
-                        config.ActivityRetentionDays = parseInt(document.querySelector('#ActivityRetentionDays').value, 10);
-                        config.TrackDownloads = document.querySelector('#TrackDownloads').checked;
+                        config.RetentionDays = parseInt(document.querySelector('#RetentionDays').value, 10);
                         ApiClient.updatePluginConfiguration(JellydashConfig.pluginUniqueId, config).then(function (result) {
                             Dashboard.processPluginConfigurationUpdateResult(result);
                         });

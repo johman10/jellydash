@@ -18,9 +18,9 @@ public sealed class JellydashControllerTests
         DatabaseHelper.Initialize();
     }
 
-    private static ActivityRepository CreateRepository()
+    private static PlaybackEntryRepository CreateRepository()
     {
-        var repo = new ActivityRepository(DatabaseHelper);
+        var repo = new PlaybackEntryRepository(DatabaseHelper);
         repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None).GetAwaiter().GetResult();
         return repo;
     }
@@ -48,13 +48,15 @@ public sealed class JellydashControllerTests
         {
             var endUtc = now.AddMinutes(i);
             var startUtc = endUtc.AddMinutes(-10);
-            var entry = new Activity
+            var entry = new PlaybackEntry
             {
+                ItemId = Guid.NewGuid(),
+                ContentKind = ContentKind.Movie,
+                DisplayTitle = $"Item-{i}",
                 UserId = Guid.NewGuid(),
                 UserName = "User",
-                ItemId = Guid.NewGuid(),
-                MediaType = "Movie",
-                ItemName = $"Item-{i}",
+                ClientName = "TestClient",
+                DeviceName = "TestDevice",
                 StartUtc = startUtc,
                 EndUtc = endUtc,
                 StartPercentage = 0,
@@ -69,11 +71,12 @@ public sealed class JellydashControllerTests
         var result = await controller.GetActivity(null, null, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
-    var items = GetItems(ok);
-    var nextCursor = GetNextCursor(ok);
+        var items = GetItems(ok);
+        var nextCursor = GetNextCursor(ok);
 
         Assert.Equal(20, items.Count);
-        Assert.True(items.SequenceEqual(items.OrderByDescending(e => e.EndUtc)));
+        var orderedByEnd = items.OrderByDescending(e => e.Timing.EndUtc).ToList();
+        Assert.True(items.Select(i => i.Timing.EndUtc).SequenceEqual(orderedByEnd.Select(i => i.Timing.EndUtc)));
         Assert.False(string.IsNullOrEmpty(nextCursor));
     }
 
@@ -87,13 +90,15 @@ public sealed class JellydashControllerTests
         {
             var endUtc = now.AddMinutes(i);
             var startUtc = endUtc.AddMinutes(-10);
-            var entry = new Activity
+            var entry = new PlaybackEntry
             {
+                ItemId = Guid.NewGuid(),
+                ContentKind = ContentKind.Movie,
+                DisplayTitle = $"Item-{i}",
                 UserId = Guid.NewGuid(),
                 UserName = "User",
-                ItemId = Guid.NewGuid(),
-                MediaType = "Movie",
-                ItemName = $"Item-{i}",
+                ClientName = "TestClient",
+                DeviceName = "TestDevice",
                 StartUtc = startUtc,
                 EndUtc = endUtc,
                 StartPercentage = 0,
@@ -108,8 +113,8 @@ public sealed class JellydashControllerTests
         // First page with explicit small limit.
         var firstResult = await controller.GetActivity(2, null, CancellationToken.None);
         var firstOk = Assert.IsType<OkObjectResult>(firstResult);
-    var firstItems = GetItems(firstOk);
-    var firstCursor = GetNextCursor(firstOk);
+        var firstItems = GetItems(firstOk);
+        var firstCursor = GetNextCursor(firstOk);
 
         Assert.Equal(2, firstItems.Count);
         Assert.False(string.IsNullOrEmpty(firstCursor));
@@ -123,21 +128,21 @@ public sealed class JellydashControllerTests
         Assert.Equal(2, secondItems.Count);
 
         // Ensure no overlap between pages and overall ordering by EndUtc.
-        Assert.Empty(firstItems.Select(i => i.EndUtc).Intersect(secondItems.Select(i => i.EndUtc)));
-        var allEndTimes = firstItems.Concat(secondItems).Select(i => i.EndUtc).ToList();
+        Assert.Empty(firstItems.Select(i => i.Timing.EndUtc).Intersect(secondItems.Select(i => i.Timing.EndUtc)));
+        var allEndTimes = firstItems.Concat(secondItems).Select(i => i.Timing.EndUtc).ToList();
         Assert.True(allEndTimes.SequenceEqual(allEndTimes.OrderByDescending(t => t)));
 
         // There should still be at least one more item remaining.
         Assert.False(string.IsNullOrEmpty(secondCursor));
     }
 
-    private static List<Activity> GetItems(OkObjectResult ok)
+    private static List<PlaybackEntryDto> GetItems(OkObjectResult ok)
     {
         var value = ok.Value ?? throw new InvalidOperationException("Result value is null.");
         var itemsProperty = value.GetType().GetProperty("items");
         Assert.NotNull(itemsProperty);
         var itemsObj = itemsProperty!.GetValue(value);
-        var itemsEnumerable = Assert.IsAssignableFrom<IEnumerable<Activity>>(itemsObj);
+        var itemsEnumerable = Assert.IsAssignableFrom<IEnumerable<PlaybackEntryDto>>(itemsObj);
         return itemsEnumerable.ToList();
     }
 

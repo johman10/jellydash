@@ -12,23 +12,17 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public PluginConfiguration()
     {
-        ActivityRetentionDays = 30;
+        RetentionDays = 30;
         EnableRetention = true;
-        TrackDownloads = true;
     }
 
     /// <summary>
-    /// Gets or sets the activity retention period in days.
+    /// Gets or sets the playback entry retention period in days.
     /// </summary>
-    public int ActivityRetentionDays { get; set; }
+    public int RetentionDays { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether retention-based cleanup is enabled.
     /// </summary>
     public bool EnableRetention { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether download activity is tracked.
-    /// </summary>
-    public bool TrackDownloads { get; set; }
 }

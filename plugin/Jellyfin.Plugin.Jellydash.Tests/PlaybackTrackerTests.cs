@@ -8,11 +8,11 @@ using Moq;
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
 [Collection("JellydashPluginTests")]
-public sealed class ActivityTrackerTests
+public sealed class PlaybackTrackerTests
 {
     private static readonly DatabaseHelper DatabaseHelper;
 
-    static ActivityTrackerTests()
+    static PlaybackTrackerTests()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "JellydashPluginTests");
         Directory.CreateDirectory(tempDir);
@@ -20,17 +20,17 @@ public sealed class ActivityTrackerTests
         DatabaseHelper.Initialize();
     }
 
-    private static ActivityRepository CreateRepository()
+    private static PlaybackEntryRepository CreateRepository()
     {
-        var repo = new ActivityRepository(DatabaseHelper);
+        var repo = new PlaybackEntryRepository(DatabaseHelper);
         repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None).GetAwaiter().GetResult();
         return repo;
     }
 
-    private static ActivityTracker CreateTracker()
+    private static PlaybackTracker CreateTracker()
     {
-        var logger = Mock.Of<ILogger<ActivityTracker>>();
-        return new ActivityTracker(logger, DatabaseHelper);
+        var logger = Mock.Of<ILogger<PlaybackTracker>>();
+        return new PlaybackTracker(logger, DatabaseHelper);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public sealed class ActivityTrackerTests
         Assert.Equal(userId, entry.UserId);
         Assert.Equal(itemId, entry.ItemId);
         Assert.Equal(0, entry.StartPercentage);
-        Assert.InRange(entry.EndPercentage, 49.0, 51.0);
+        Assert.InRange(entry.EndPercentage!.Value, 49.0, 51.0);
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public sealed class ActivityTrackerTests
 
         Assert.Equal(userId, entry.UserId);
         Assert.Equal(itemId, entry.ItemId);
-        Assert.InRange(entry.StartPercentage, 24.0, 26.0);
-        Assert.InRange(entry.EndPercentage, 24.0, 26.0);
+        Assert.InRange(entry.StartPercentage!.Value, 24.0, 26.0);
+        Assert.InRange(entry.EndPercentage!.Value, 24.0, 26.0);
     }
 
     [Fact]

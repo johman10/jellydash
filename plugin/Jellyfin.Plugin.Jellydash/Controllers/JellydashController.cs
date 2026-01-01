@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,25 +18,25 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
     [ApiController]
     public class JellydashController : ControllerBase
     {
-        private readonly ActivityRepository _activityRepository;
+        private readonly PlaybackEntryRepository _activityRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JellydashController"/> class.
         /// </summary>
         /// <param name="activityRepository">The activity repository.</param>
-        public JellydashController(ActivityRepository activityRepository)
+        public JellydashController(PlaybackEntryRepository activityRepository)
         {
             _activityRepository = activityRepository;
         }
 
         /// <summary>
-        /// Returns a page of recent activity entries using cursor-based pagination.
+        /// Returns a page of recent playback entries using cursor-based pagination.
         /// </summary>
         /// <param name="limit">Maximum number of entries to return (max 100, default 20).</param>
         /// <param name="cursor">An opaque cursor returned from a previous page.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A page of recent activity entries and a cursor for the next page, if any.</returns>
-        [HttpGet("activity")]
+        [HttpGet("history")]
         [Authorize]
         public async Task<IActionResult> GetActivity([FromQuery] int? limit, [FromQuery] string? cursor, CancellationToken cancellationToken)
         {
@@ -65,9 +67,15 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
                 nextCursor = EncodeCursor(lastEndUtc.Value, lastId.Value);
             }
 
+            var dtoItems = new List<PlaybackEntryDto>(entries.Count);
+            foreach (var entry in entries)
+            {
+                dtoItems.Add(entry.ToDto());
+            }
+
             return Ok(new
             {
-                items = entries,
+                items = dtoItems,
                 nextCursor
             });
         }

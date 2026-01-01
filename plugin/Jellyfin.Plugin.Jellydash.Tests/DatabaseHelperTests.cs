@@ -7,9 +7,9 @@ namespace Jellyfin.Plugin.Jellydash.Tests;
 public class DatabaseHelperTests
 {
     [Fact]
-    public void Initialize_CreatesActivitiesTable()
+    public void PlaybackEntriesTable()
     {
-        var tempRoot = Path.Combine(Path.GetTempPath(), "JellydashPluginTests", "Initialize_CreatesActivitiesTable");
+        var tempRoot = Path.Combine(Path.GetTempPath(), "JellydashPluginTests", "PlaybackEntriesTable");
         Directory.CreateDirectory(tempRoot);
 
         var helper = new DatabaseHelper(tempRoot);
@@ -19,10 +19,10 @@ public class DatabaseHelperTests
         connection.Open();
 
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='Activities';";
+        cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='PlaybackEntries';";
         var result = cmd.ExecuteScalar();
 
-        Assert.Equal("Activities", result as string);
+        Assert.Equal("PlaybackEntries", result as string);
     }
 
     [Fact]

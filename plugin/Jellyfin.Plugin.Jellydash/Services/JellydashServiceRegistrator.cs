@@ -28,10 +28,10 @@ public sealed class JellydashServiceRegistrator : IPluginServiceRegistrator
         });
 
         // Register our playback activity tracker so it receives playback start/stop events.
-        serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, ActivityTracker>();
-        serviceCollection.AddScoped<IEventConsumer<PlaybackStopEventArgs>, ActivityTracker>();
+        serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, PlaybackTracker>();
+        serviceCollection.AddScoped<IEventConsumer<PlaybackStopEventArgs>, PlaybackTracker>();
 
         // Register activity repository as a singleton service for API controllers.
-        serviceCollection.AddSingleton<ActivityRepository>();
+        serviceCollection.AddSingleton<PlaybackEntryRepository>();
     }
 }

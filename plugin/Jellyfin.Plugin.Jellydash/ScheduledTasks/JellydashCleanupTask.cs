@@ -11,17 +11,17 @@ namespace Jellyfin.Plugin.Jellydash.ScheduledTasks;
 /// <summary>
 /// Scheduled task that prunes historical Jellydash entries older than the configured retention window.
 /// </summary>
-public sealed class JellydashActivityCleanupTask : IScheduledTask
+public sealed class JellydashCleanupTask : IScheduledTask
 {
-    private readonly ActivityRepository _activityRepository;
+    private readonly PlaybackEntryRepository _playbackEntryRepository;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="JellydashActivityCleanupTask"/> class.
+    /// Initializes a new instance of the <see cref="JellydashCleanupTask"/> class.
     /// </summary>
-    /// <param name="activityRepository">The activity repository.</param>
-    public JellydashActivityCleanupTask(ActivityRepository activityRepository)
+    /// <param name="playbackEntryRepository">The playback entry repository.</param>
+    public JellydashCleanupTask(PlaybackEntryRepository playbackEntryRepository)
     {
-        _activityRepository = activityRepository;
+        _playbackEntryRepository = playbackEntryRepository;
     }
 
     /// <inheritdoc />
@@ -58,7 +58,7 @@ public sealed class JellydashActivityCleanupTask : IScheduledTask
             return;
         }
 
-        var retentionDays = config.ActivityRetentionDays;
+        var retentionDays = config.RetentionDays;
         if (retentionDays <= 0)
         {
             retentionDays = 30;
@@ -67,7 +67,7 @@ public sealed class JellydashActivityCleanupTask : IScheduledTask
         var retention = TimeSpan.FromDays(retentionDays);
         var cutoffUtc = DateTime.UtcNow - retention;
 
-        var removed = await _activityRepository
+        await _playbackEntryRepository
             .DeleteOlderThanAsync(cutoffUtc, cancellationToken)
             .ConfigureAwait(false);
 
