@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
 import 'package:jellydash/types/session.dart';
 import 'dart:async';
 import '../services/jellyfin_api_service.dart';
-import '../widgets/current_activities.dart';
+import '../widgets/now_playing.dart';
 import '../widgets/recent_activities.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -44,11 +45,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  void _fetchSessions() {
+  Future<void> _fetchSessions() {
     // TODO: Error handling.
     // In case of an error add the appropriate state.
     // Then show instructions to verify the configuration with a button to settings.
-    widget.apiService.fetchCurrentSessions().then((data) {
+    return widget.apiService.fetchCurrentSessions().then((data) {
       data.sort((a, b) {
         final aDateCreated = a.dateCreated;
         final bDateCreated = b.dateCreated;
@@ -79,7 +80,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Enable pull-to-refresh only on mobile platforms (Android/iOS)
+    final platform = Theme.of(context).platform;
+    final isTouchDevice =
+        platform == TargetPlatform.android || platform == TargetPlatform.iOS;
     return AppScaffold(
+      title: 'Jellydash',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.settings),
+          tooltip: 'Settings',
+          onPressed: () {
+            GoRouter.of(context).push('/settings');
+          },
+        ),
+      ],
+      onRefresh: isTouchDevice ? _fetchSessions : null,
       children: [
         SizedBox(
           width: double.infinity,
@@ -87,7 +103,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             CurrentActivities(isLoading: _initialLoading, sessions: _sessions),
             const RecentActivityCard(),
           ]),
-        ),
+        )
       ],
     );
   }
