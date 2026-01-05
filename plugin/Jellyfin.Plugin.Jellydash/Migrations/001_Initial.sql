@@ -1,12 +1,13 @@
 CREATE TABLE IF NOT EXISTS PlaybackEntries (
     Id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+    PlaybackId                  TEXT    NOT NULL,
 
     -- Identity
-    ItemId                      TEXT    NOT NULL,
+    ItemId                      TEXT    NULL,
+    ParentItemId                TEXT    NULL,
     ContentKind                 INTEGER NOT NULL,
-    DisplayTitle                TEXT    NOT NULL,
-    PrimaryImageUrl             TEXT    NULL,
-    PrimaryGenre                TEXT    NULL,
+    Title                       TEXT    NOT NULL,
+    Genres                      TEXT    NULL,
     Year                        INTEGER NULL,
     SeriesName                  TEXT    NULL,
     SeasonNumber                INTEGER NULL,
@@ -15,7 +16,6 @@ CREATE TABLE IF NOT EXISTS PlaybackEntries (
     -- User
     UserId                      TEXT    NOT NULL,
     UserName                    TEXT    NOT NULL,
-    UserImageUrl                TEXT    NULL,
 
     -- Client
     ClientName                  TEXT    NOT NULL,
@@ -28,10 +28,8 @@ CREATE TABLE IF NOT EXISTS PlaybackEntries (
     RuntimeTicks                INTEGER NULL,
     StartPositionTicks          INTEGER NULL,
     EndPositionTicks            INTEGER NULL,
-    StartPercentage             REAL    NULL,
-    EndPercentage               REAL    NULL,
-    IsCompleted                 INTEGER NOT NULL,
-    IsPaused                    INTEGER NOT NULL,
+    IsCompleted                 BOOLEAN NOT NULL,
+    IsPaused                    BOOLEAN NOT NULL,
 
     -- Stream: video
     VideoCodec                  TEXT    NULL,
@@ -50,17 +48,23 @@ CREATE TABLE IF NOT EXISTS PlaybackEntries (
     AudioSampleRate             INTEGER NULL,
 
     -- Stream: subtitle
-    SubtitleIsForced            INTEGER NULL,
-    SubtitleIsHearingImpaired   INTEGER NULL,
+    SubtitleIsForced            BOOLEAN NULL,
+    SubtitleIsHearingImpaired   BOOLEAN NULL,
     SubtitleCodec               TEXT    NULL,
     SubtitleLanguage            TEXT    NULL,
 
     -- Transcoding
-    IsVideoDirect               INTEGER NOT NULL,
-    IsAudioDirect               INTEGER NOT NULL,
+    IsVideoDirect               BOOLEAN NOT NULL,
+    IsAudioDirect               BOOLEAN NOT NULL,
     TranscodeBitrate            INTEGER NULL,
     HardwareAcceleration        TEXT    NULL,
+    TranscodedVideoContainer    TEXT    NULL,
     TranscodedVideoCodec        TEXT    NULL,
     TranscodedAudioCodec        TEXT    NULL,
-    TranscodeReasonsJson        TEXT    NULL
+    TranscodeReasonsJson        TEXT    NULL,
+    TranscodeCompletionPercentage REAL   NULL
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS IX_PlaybackEntries_PlaybackId
+    ON PlaybackEntries (PlaybackId)
+    WHERE PlaybackId IS NOT NULL AND IsCompleted = 0;

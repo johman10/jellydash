@@ -35,10 +35,26 @@ public class TimingInfoDto
     /// <summary>
     /// Gets the starting watched percentage (0-100), if known.
     /// </summary>
-    public double? StartPercentage { get; init; }
+    public double? StartPercentage
+    {
+        get
+        {
+            return StartPositionTicks.HasValue && RuntimeTicks.HasValue && RuntimeTicks.Value > 0
+                ? (double)StartPositionTicks.Value / RuntimeTicks.Value * 100.0
+                : null;
+        }
+    }
 
     /// <summary>
     /// Gets the ending watched percentage (0-100), if known.
     /// </summary>
-    public double? EndPercentage { get; init; }
+    public double? EndPercentage
+    {
+        get
+        {
+            return EndPositionTicks.HasValue && RuntimeTicks.HasValue && RuntimeTicks.Value > 0
+                ? (double)EndPositionTicks.Value / RuntimeTicks.Value * 100.0
+                : null;
+        }
+    }
 }

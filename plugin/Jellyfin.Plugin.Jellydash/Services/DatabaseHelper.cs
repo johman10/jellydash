@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Threading;
+using Dapper;
+using Jellyfin.Plugin.Jellydash.TypeMappers;
 using Microsoft.Data.Sqlite;
 
 namespace Jellyfin.Plugin.Jellydash.Services;
@@ -25,6 +27,8 @@ public class DatabaseHelper
         Directory.CreateDirectory(pluginDir);
         _dataPath = dataPath;
         _databasePath = Path.Combine(pluginDir, "jellydash.db");
+
+        RegisterTypeHandlers();
     }
 
     /// <summary>
@@ -48,6 +52,13 @@ public class DatabaseHelper
     public string ConnectionString
     {
         get => $"Data Source={_databasePath};Mode=ReadWriteCreate;Cache=Shared";
+    }
+
+    private static void RegisterTypeHandlers()
+    {
+        SqlMapper.AddTypeHandler(new GuidTypeHandler());
+        SqlMapper.AddTypeHandler(new NullableGuidTypeHandler());
+        SqlMapper.AddTypeHandler(new StringCollectionTypeHandler());
     }
 
     /// <summary>

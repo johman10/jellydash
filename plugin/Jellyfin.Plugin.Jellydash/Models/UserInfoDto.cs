@@ -18,7 +18,7 @@ public class UserInfoDto
     public string UserName { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the URL or path to the user's primary image.
+    /// Gets the relative path to the user's primary image.
     /// </summary>
-    public string? UserImageUrl { get; init; }
+    public string? UserImagePath { get; init; }
 }

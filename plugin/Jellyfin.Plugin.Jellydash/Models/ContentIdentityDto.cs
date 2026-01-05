@@ -1,24 +1,40 @@
+using System;
+using System.Collections.ObjectModel;
+
 namespace Jellyfin.Plugin.Jellydash.Models;
 
 /// <summary>
 /// Represents the identity and display metadata for a media item.
 /// </summary>
-public class ContentIdentityDto
+public class ContentIdentityDto(ContentKind contentKind, Guid itemId, Guid? parentItemId)
 {
+    /// <summary>
+    /// Gets the relative path to the primary image.
+    /// </summary>
+    public string? PrimaryImagePath
+    {
+        get
+        {
+            if (contentKind == ContentKind.Episode)
+            {
+                return $"/Items/{parentItemId}/Images/Primary";
+            }
+            else
+            {
+                return $"/Items/{itemId}/Images/Primary";
+            }
+        }
+    }
+
     /// <summary>
     /// Gets the primary display title (series or movie name).
     /// </summary>
-    public string DisplayTitle { get; init; } = string.Empty;
-
-    /// <summary>
-    /// Gets the URL or path to the primary image.
-    /// </summary>
-    public string? PrimaryImageUrl { get; init; }
+    public string Title { get; init; } = string.Empty;
 
     /// <summary>
     /// Gets the primary genre of the item, if known.
     /// </summary>
-    public string? PrimaryGenre { get; init; }
+    public Collection<string> Genres { get; init; } = new Collection<string>();
 
     /// <summary>
     /// Gets the production year when the content is a movie.

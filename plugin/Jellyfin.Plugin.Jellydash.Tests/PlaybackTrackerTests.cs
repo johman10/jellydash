@@ -1,7 +1,10 @@
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Jellydash.Events;
+using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Session;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -20,10 +23,10 @@ public sealed class PlaybackTrackerTests
         DatabaseHelper.Initialize();
     }
 
-    private static PlaybackEntryRepository CreateRepository()
+    private static async Task<PlaybackEntryRepository> CreateRepositoryAsync()
     {
         var repo = new PlaybackEntryRepository(DatabaseHelper);
-        repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None).GetAwaiter().GetResult();
+        await repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None);
         return repo;
     }
 
@@ -36,7 +39,7 @@ public sealed class PlaybackTrackerTests
     [Fact]
     public async Task OnEvent_StartAndStop_WritesActivity()
     {
-        var repo = CreateRepository();
+        var repo = await CreateRepositoryAsync();
         var logger = CreateTracker();
 
         var userId = Guid.NewGuid();
@@ -45,45 +48,44 @@ public sealed class PlaybackTrackerTests
         var startArgs = CreatePlaybackStartEventArgs(userId, itemId, BaseItemKind.Movie, 10_000_000L, 0L);
         await logger.OnEvent(startArgs);
 
-        var stopArgs = CreatePlaybackStopEventArgs(userId, itemId, BaseItemKind.Movie, 10_000_000L, 5_000_000L, startArgs.PlaySessionId);
+        var startEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(startArgs), CancellationToken.None);
+        Assert.NotNull(startEntry);
+
+        var stopArgs = CreatePlaybackStopEventArgs(userId, itemId, BaseItemKind.Movie, 10_000_000L, 5_000_000L, startArgs.Session.Id, startArgs.Session.PlaylistItemId);
         await logger.OnEvent(stopArgs);
 
-        var entries = await repo.GetRecentAsync(DateTime.MinValue, CancellationToken.None);
-        Assert.Single(entries);
-        var entry = entries[0];
+        var entry = await repo.GetRecentlyCompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(stopArgs), CancellationToken.None);
+        Assert.NotNull(entry);
 
         Assert.Equal(userId, entry.UserId);
         Assert.Equal(itemId, entry.ItemId);
-        Assert.Equal(0, entry.StartPercentage);
-        Assert.InRange(entry.EndPercentage!.Value, 49.0, 51.0);
+        Assert.True(entry.IsCompleted);
     }
 
     [Fact]
     public async Task OnEvent_StopWithoutStart_StillWritesEntry()
     {
-        var repo = CreateRepository();
+        var repo = await CreateRepositoryAsync();
         var logger = CreateTracker();
 
         var userId = Guid.NewGuid();
         var itemId = Guid.NewGuid();
 
-        var stopArgs = CreatePlaybackStopEventArgs(userId, itemId, BaseItemKind.Movie, 10_000_000L, 2_500_000L, playSessionId: "session-1");
+        var stopArgs = CreatePlaybackStopEventArgs(userId, itemId, BaseItemKind.Movie, 10_000_000L, 2_500_000L, Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         await logger.OnEvent(stopArgs);
 
-        var entries = await repo.GetRecentAsync(DateTime.MinValue, CancellationToken.None);
-        Assert.Single(entries);
-        var entry = entries[0];
+        var entry = await repo.GetRecentlyCompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(stopArgs), CancellationToken.None);
+        Assert.NotNull(entry);
 
         Assert.Equal(userId, entry.UserId);
         Assert.Equal(itemId, entry.ItemId);
-        Assert.InRange(entry.StartPercentage!.Value, 24.0, 26.0);
-        Assert.InRange(entry.EndPercentage!.Value, 24.0, 26.0);
+        Assert.True(entry.IsCompleted);
     }
 
     [Fact]
     public async Task OnEvent_UnsupportedItemType_DoesNotWriteEntry()
     {
-        var repo = CreateRepository();
+        var repo = await CreateRepositoryAsync();
         var logger = CreateTracker();
 
         var userId = Guid.NewGuid();
@@ -92,11 +94,11 @@ public sealed class PlaybackTrackerTests
         var startArgs = CreatePlaybackStartEventArgs(userId, itemId, BaseItemKind.Audio, 10_000_000L, 0L);
         await logger.OnEvent(startArgs);
 
-        var stopArgs = CreatePlaybackStopEventArgs(userId, itemId, BaseItemKind.Audio, 10_000_000L, 5_000_000L, startArgs.PlaySessionId);
+        var stopArgs = CreatePlaybackStopEventArgs(userId, itemId, BaseItemKind.Audio, 10_000_000L, 5_000_000L, startArgs.Session.Id, startArgs.Session.PlaylistItemId);
         await logger.OnEvent(stopArgs);
 
-        var entries = await repo.GetRecentAsync(DateTime.MinValue, CancellationToken.None);
-        Assert.Empty(entries);
+        var entry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(stopArgs), CancellationToken.None);
+        Assert.Null(entry);
     }
 
     private static PlaybackStartEventArgs CreatePlaybackStartEventArgs(Guid userId, Guid itemId, BaseItemKind kind, long runtimeTicks, long startPositionTicks)
@@ -115,19 +117,27 @@ public sealed class PlaybackTrackerTests
             RunTimeTicks = runtimeTicks
         };
 
+        var mockSessionManager = new Mock<ISessionManager>().Object;
+        var mockLogger = new Mock<ILogger<SessionInfo>>().Object;
+        var session = new SessionInfo(mockSessionManager, mockLogger)
+        {
+            Id = Guid.NewGuid().ToString(),
+            PlaylistItemId = Guid.NewGuid().ToString()
+        };
+
 
         return new PlaybackStartEventArgs
         {
             Users = new List<Database.Implementations.Entities.User> { user },
             MediaInfo = media,
             PlaybackPositionTicks = startPositionTicks,
-            PlaySessionId = "session-1",
+            Session = session,
             ClientName = "client",
             DeviceName = "device"
         };
     }
 
-    private static PlaybackStopEventArgs CreatePlaybackStopEventArgs(Guid userId, Guid itemId, BaseItemKind kind, long runtimeTicks, long positionTicks, string? playSessionId)
+    private static PlaybackStopEventArgs CreatePlaybackStopEventArgs(Guid userId, Guid itemId, BaseItemKind kind, long runtimeTicks, long positionTicks, string sessionId, string playlistItemId)
     {
         var user = new Database.Implementations.Entities.User("User", "auth", "reset")
         {
@@ -143,13 +153,21 @@ public sealed class PlaybackTrackerTests
             RunTimeTicks = runtimeTicks
         };
 
+        var mockSessionManager = new Mock<ISessionManager>().Object;
+        var mockLogger = new Mock<ILogger<SessionInfo>>().Object;
+        var session = new SessionInfo(mockSessionManager, mockLogger)
+        {
+            Id = sessionId,
+            PlaylistItemId = playlistItemId
+        };
+
 
         return new PlaybackStopEventArgs
         {
-            Users = new List<Database.Implementations.Entities.User> { user },
+            Users = [user],
             MediaInfo = media,
             PlaybackPositionTicks = positionTicks,
-            PlaySessionId = playSessionId,
+            Session = session,
             ClientName = "client",
             DeviceName = "device"
         };
