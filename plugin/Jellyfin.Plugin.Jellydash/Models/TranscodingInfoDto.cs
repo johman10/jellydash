@@ -42,4 +42,9 @@ public class TranscodingInfoDto
     /// Gets reasons reported by Jellyfin for why transcoding was required.
     /// </summary>
     public IReadOnlyList<string> Reasons { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Gets the completion percentage of the transcoding process, if known.
+    /// </summary>
+    public double? CompletionPercentage { get; init; }
 }

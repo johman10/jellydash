@@ -15,6 +15,7 @@ Jellydash is a dashboard for [Jellyfin](https://jellyfin.org/), providing a real
  - **Activity Cards**: Current activity is rendered via `CurrentActivityCard` inside `CurrentActivities` using responsive Wrap-based columns (no implicit scrolling in these widgets; scrolling is handled by higher-level layouts).
  - **Session Semantics**: Session UI should respect `Session` fields (e.g., `season`/`episode` vs `year`, `isPaused`, `progress`/`duration`, `bitrate`) and avoid showing placeholder or "null"-like values to the user.
  - **Separation of Concerns**: Keep data fetching, state management, and UI rendering logic separate for maintainability. Also use files to split logic between files and keep naming general when the solution is reusable.
+ - **Playback History Semantics**: The Jellydash plugin stores playback spans in SQLite. Each span is keyed by a generated `PlaybackId` (a GUID based on Jellyfin session ID, playlist item ID, and item ID) and is first inserted when playback starts, updated on progress/stop, and marked completed via `IsCompleted` when sufficiently watched. All playback tracking state is persisted in SQLite; there is no in-memory session state. Public history queries must continue to only return completed entries; ongoing sessions are fetched via dedicated repository methods.
 
 ## Conventions & Workflows
 - **Naming**: Use common flutter conventions (e.g., PascalCase for classes, camelCase for variables).
@@ -31,12 +32,15 @@ Jellydash is a dashboard for [Jellyfin](https://jellyfin.org/), providing a real
 - `.github/copilot-instructions.md`: AI agent instructions (this file)
 - `plugin`: Jellyfin plugin source code and configuration (activity tracking, server endpoints, scheduled cleanup)
 - `README.md`: Project purpose, high-level usage, and Jellyfin integration notes
+ - `plugin/README.md`: Plugin internals, playback tracking lifecycle, storage, and API surface
 
 ## Examples
 - To add a new dashboard widget, create a Flutter widget in PascalCase, fetch data from the Jellyfin API, and document the endpoint in a comment.
 - When handling API errors, log the error and display a concise message to the user.
  - When updating activity-related UI (e.g., remaining time, pause overlays, bitrate display), keep `Session` semantics consistent and update the corresponding tests in `test/widgets/current_activity_card_test.dart` and `test/widgets/current_activities_test.dart`.
+ - When changing playback tracking or history semantics in the plugin, also update `plugin/README.md` and the repository tests under `plugin/Jellyfin.Plugin.Jellydash.Tests` to document and enforce the expected behavior (especially completed vs ongoing entries and `PlaybackId` generation and usage).
 
 ## Notes
 - No separate backend beyond the Jellydash Jellyfin plugin: the Flutter app calls Jellyfin (core + plugin) directly.
-- Keep instructions concise and actionable for future maintainers and AI agents.
+ - Dapper type handlers for `Guid` and `Collection<string>` are registered at startup to ensure correct mapping between C# and SQLite.
+ - Keep instructions concise and actionable for future maintainers and AI agents.

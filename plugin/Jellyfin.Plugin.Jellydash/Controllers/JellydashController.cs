@@ -42,7 +42,7 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
         {
             var pageSize = limit.HasValue && limit.Value > 0 ? Math.Min(limit.Value, 100) : 20;
 
-            long? beforeId = null;
+            int? beforeId = null;
             DateTime? beforeEndUtc = null;
 
             if (!string.IsNullOrWhiteSpace(cursor))
@@ -88,7 +88,7 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
             return Convert.ToBase64String(bytes);
         }
 
-        private static (DateTime EndUtc, long Id) DecodeCursor(string cursor)
+        private static (DateTime EndUtc, int Id) DecodeCursor(string cursor)
         {
             var bytes = Convert.FromBase64String(cursor);
             var payload = Encoding.UTF8.GetString(bytes);
@@ -99,7 +99,7 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
             }
 
             var endUtc = DateTime.Parse(parts[0], CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
-            var id = long.Parse(parts[1], CultureInfo.InvariantCulture);
+            var id = int.Parse(parts[1], CultureInfo.InvariantCulture);
             return (endUtc, id);
         }
     }

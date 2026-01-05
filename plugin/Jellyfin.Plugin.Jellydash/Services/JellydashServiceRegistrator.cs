@@ -5,6 +5,7 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Net.WebSocketMessages.Outbound;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,6 +30,7 @@ public sealed class JellydashServiceRegistrator : IPluginServiceRegistrator
 
         // Register our playback activity tracker so it receives playback start/stop events.
         serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, PlaybackTracker>();
+        serviceCollection.AddScoped<IEventConsumer<PlaybackProgressEventArgs>, PlaybackTracker>();
         serviceCollection.AddScoped<IEventConsumer<PlaybackStopEventArgs>, PlaybackTracker>();
 
         // Register activity repository as a singleton service for API controllers.

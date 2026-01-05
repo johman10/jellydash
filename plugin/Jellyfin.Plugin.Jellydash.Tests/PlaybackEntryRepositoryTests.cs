@@ -57,55 +57,33 @@ public class PlaybackEntryRepositoryTests
         await repository.AppendAsync(older, cancellationToken);
         await repository.AppendAsync(newer, cancellationToken);
 
-        var cutoff = newer.EndUtc!.Value.AddHours(-1);
+        var cutoff = newer.EndUtc!.Value.AddDays(-2);
         var removed = await repository.DeleteOlderThanAsync(cutoff, cancellationToken);
         Assert.Equal(1, removed);
 
-        var remaining = await repository.GetRecentAsync(DateTime.MinValue, cancellationToken);
-        Assert.Single(remaining);
-        Assert.Equal(newer.EndUtc, remaining[0].EndUtc);
-    }
+        var newer_entry = await repository.GetRecentlyCompletedByPlaybackIdAsync(newer.PlaybackId, cancellationToken);
+        Assert.NotNull(newer_entry);
+        Assert.Equal(newer.EndUtc, newer_entry.EndUtc);
 
-    [Fact]
-    public async Task GetRecentAsync_ReturnsEntriesOnOrAfterCutoff()
-    {
-        var repository = new PlaybackEntryRepository(DatabaseHelper);
-        var cancellationToken = CancellationToken.None;
-
-        // Ensure a clean database.
-        await repository.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), cancellationToken);
-
-        var now = DateTime.UtcNow;
-        var older = CreateEntry(now.AddHours(-3), now.AddHours(-2));
-        var cutoffEntry = CreateEntry(now.AddHours(-2), now.AddHours(-1));
-        var newer = CreateEntry(now.AddHours(-1), now);
-
-        await repository.AppendAsync(older, cancellationToken);
-        await repository.AppendAsync(cutoffEntry, cancellationToken);
-        await repository.AppendAsync(newer, cancellationToken);
-
-        var cutoff = cutoffEntry.EndUtc!.Value;
-        var recent = await repository.GetRecentAsync(cutoff, cancellationToken);
-
-        Assert.Equal(2, recent.Count);
-        Assert.True(recent.All(e => e.EndUtc >= cutoff));
+        var older_entry = await repository.GetRecentlyCompletedByPlaybackIdAsync(older.PlaybackId, cancellationToken);
+        Assert.Null(older_entry);
     }
 
     private static PlaybackEntry CreateEntry(DateTime startUtc, DateTime endUtc)
     {
         return new PlaybackEntry
         {
+            PlaybackId = Guid.NewGuid(),
             ItemId = Guid.NewGuid(),
             ContentKind = ContentKind.Movie,
-            DisplayTitle = "Item",
+            Title = "Item",
             UserId = Guid.NewGuid(),
             UserName = "User",
             ClientName = "TestClient",
             DeviceName = "TestDevice",
             StartUtc = startUtc,
             EndUtc = endUtc,
-            StartPercentage = 0,
-            EndPercentage = 100
+            IsCompleted = true
         };
     }
 }
