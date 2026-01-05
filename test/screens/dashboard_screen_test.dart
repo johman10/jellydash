@@ -3,9 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/screens/dashboard_screen.dart';
 import 'package:jellydash/services/jellyfin_api_service.dart';
 import 'package:jellydash/types/session.dart';
-import 'package:jellydash/widgets/current_activities.dart';
+import 'package:jellydash/widgets/now_playing.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:go_router/go_router.dart';
 
 import 'dashboard_screen_test.mocks.dart';
 
@@ -13,11 +14,22 @@ import 'dashboard_screen_test.mocks.dart';
 void main() {
   Widget wrapDashboard(MockJellyfinApiService apiService,
       {int pollingInterval = 1}) {
-    return MaterialApp(
-      home: DashboardScreen(
-        apiService: apiService,
-        pollingInterval: pollingInterval,
-      ),
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => DashboardScreen(
+            apiService: apiService,
+            pollingInterval: pollingInterval,
+          ),
+        ),
+      ],
+      initialLocation: '/',
+    );
+    return MaterialApp.router(
+      routerDelegate: router.routerDelegate,
+      routeInformationParser: router.routeInformationParser,
+      routeInformationProvider: router.routeInformationProvider,
     );
   }
 
@@ -196,7 +208,7 @@ void main() {
       await tester.pumpWidget(wrapDashboard(mockApiService));
       await tester.pumpAndSettle();
 
-      expect(find.text('No current activities.'), findsOneWidget);
+      expect(find.text('It\'s quiet... too quiet.'), findsOneWidget);
     });
 
     testWidgets('shows multiple sessions', (tester) async {

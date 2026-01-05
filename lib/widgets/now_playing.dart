@@ -25,7 +25,7 @@ class CurrentActivities extends StatelessWidget {
       return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Padding(
           padding: EdgeInsets.all(24),
-          child: Text('No current activities.'),
+          child: Text('It\'s quiet... too quiet.'),
         ),
       ]);
     }
@@ -78,7 +78,7 @@ class CurrentActivities extends StatelessWidget {
         spacing: 8,
         children: [
           const Text(
-            'Current Activities',
+            'Now Playing',
             style: JellydashTextStyles.sectionTitle,
           ),
           getContent(isLoading, sessions),

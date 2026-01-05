@@ -9,82 +9,76 @@ import 'services/app_settings_service.dart';
 
 final appSettingsService = AppSettingsService();
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "assets/env/.env", isOptional: true);
-  await appSettingsService.init();
-  runApp(const JellydashApp());
+class SettingsHolder extends InheritedWidget {
+  final AppSettings settings;
+  const SettingsHolder(
+      {required this.settings, required super.child, super.key});
+
+  static AppSettings of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SettingsHolder>()!.settings;
+
+  @override
+  bool updateShouldNotify(covariant SettingsHolder oldWidget) =>
+      settings != oldWidget.settings;
 }
 
-final GoRouter _router = GoRouter(
-  routes: <RouteBase>[
-    GoRoute(
-      name: 'dashboard',
-      path: '/',
-      builder: (BuildContext context, GoRouterState state) {
-        return FutureBuilder<AppSettings>(
-          future: appSettingsService.loadSettings(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else if (snapshot.hasData) {
-              final appSettings = snapshot.data!;
-              return DashboardScreen(
-                apiService: JellyfinApiService(
-                  baseUrl: appSettings.jellyfinBaseUrl,
-                  apiKey: appSettings.jellyfinApiKey,
-                ),
-                pollingInterval: appSettings.pollingInterval,
-              );
-            } else {
-              return const Center(child: Text('No settings found.'));
-            }
-          },
-        );
-      },
-    ),
-    GoRoute(
-      name: 'settings',
-      path: '/settings',
-      builder: (BuildContext context, GoRouterState state) {
-        return FutureBuilder<AppSettings>(
-          future: appSettingsService.loadSettings(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else if (snapshot.hasData) {
-              final appSettings = snapshot.data!;
-              return SettingsScreen(
-                appSettings: appSettings,
-              );
-            } else {
-              return const Center(child: Text('No settings found.'));
-            }
-          },
-        );
-      },
-    ),
-  ],
-);
+Future<void> main() async {
+  GoRouter.optionURLReflectsImperativeAPIs = true;
+
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: "assets/env/.env", isOptional: true);
+  await appSettingsService.init();
+  final settings = await appSettingsService.loadSettings();
+
+  runApp(JellydashApp(settings: settings));
+}
+
+// GoRouter is now created inside JellydashApp with settings
 
 class JellydashApp extends StatelessWidget {
-  const JellydashApp({super.key});
+  final AppSettings settings;
+  const JellydashApp({super.key, required this.settings});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Jellydash',
-      theme: ThemeData(
-        colorScheme:
-            ColorScheme.fromSeed(seedColor: JellydashColors.primary),
-        useMaterial3: true,
+    final GoRouter router = GoRouter(
+      routes: <RouteBase>[
+        GoRoute(
+          name: 'dashboard',
+          path: '/',
+          builder: (BuildContext context, GoRouterState state) {
+            final appSettings = SettingsHolder.of(context);
+            return DashboardScreen(
+              apiService: JellyfinApiService(
+                baseUrl: appSettings.jellyfinBaseUrl,
+                apiKey: appSettings.jellyfinApiKey,
+              ),
+              pollingInterval: appSettings.pollingInterval,
+            );
+          },
+        ),
+        GoRoute(
+          name: 'settings',
+          path: '/settings',
+          builder: (BuildContext context, GoRouterState state) {
+            final appSettings = SettingsHolder.of(context);
+            return SettingsScreen(appSettings: appSettings);
+          },
+        ),
+      ],
+    );
+    return SettingsHolder(
+      settings: settings,
+      child: MaterialApp.router(
+        title: 'Jellydash',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: JellydashColors.primary),
+          useMaterial3: true,
+        ),
+        darkTheme: ThemeData.dark(),
+        routerConfig: router,
       ),
-      darkTheme: ThemeData.dark(),
-      routerConfig: _router,
     );
   }
 }
