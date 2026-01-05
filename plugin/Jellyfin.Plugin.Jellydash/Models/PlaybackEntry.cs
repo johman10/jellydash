@@ -1,5 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace Jellyfin.Plugin.Jellydash.Models;
 
@@ -11,9 +19,25 @@ public class PlaybackEntry
     // Identity
 
     /// <summary>
+    /// Gets or sets the record ID.
+    /// </summary>
+    public int Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Jellyfin playback identifier associated with this playback span.
+    /// </summary>
+    public required Guid PlaybackId { get; set; }
+
+    /// <summary>
     /// Gets or sets the Jellyfin item identifier.
     /// </summary>
     public Guid ItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Jellyfin parent item identifier.
+    /// Only relevant for episodes within a series.
+    /// </summary>
+    public Guid? ParentItemId { get; set; }
 
     /// <summary>
     /// Gets or sets the kind of content (movie, episode, or other).
@@ -23,17 +47,12 @@ public class PlaybackEntry
     /// <summary>
     /// Gets or sets the primary display title (series or movie name).
     /// </summary>
-    public string DisplayTitle { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the URL or path to the primary image.
+    /// Gets the genre of the item, if known.
     /// </summary>
-    public string? PrimaryImageUrl { get; set; }
-
-    /// <summary>
-    /// Gets or sets the primary genre of the item, if known.
-    /// </summary>
-    public string? PrimaryGenre { get; set; }
+    public Collection<string> Genres { get; init; } = new Collection<string>();
 
     /// <summary>
     /// Gets or sets the production year when the content is a movie.
@@ -43,7 +62,7 @@ public class PlaybackEntry
     /// <summary>
     /// Gets or sets the series name when the content is an episode.
     /// </summary>
-    public string? SeriesName { get; set; }
+    public string SeriesName { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the season number when the content is an episode.
@@ -66,11 +85,6 @@ public class PlaybackEntry
     /// Gets or sets the user name for display.
     /// </summary>
     public string UserName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the URL or path to the user's primary image.
-    /// </summary>
-    public string? UserImageUrl { get; set; }
 
     // Client
 
@@ -116,15 +130,11 @@ public class PlaybackEntry
     /// </summary>
     public long? EndPositionTicks { get; set; }
 
-    /// <summary>
-    /// Gets or sets the starting watched percentage (0-100), if known.
-    /// </summary>
-    public double? StartPercentage { get; set; }
+    // TODO: Move to DTO, no need to store in DB
+    // public double? StartPercentage { get; set; }
 
-    /// <summary>
-    /// Gets or sets the ending watched percentage (0-100), if known.
-    /// </summary>
-    public double? EndPercentage { get; set; }
+    // TODO: Move to DTO, no need to store in DB
+    // public double? EndPercentage { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this playback span has fully completed.
@@ -250,6 +260,11 @@ public class PlaybackEntry
     public string? TranscodedVideoCodec { get; set; }
 
     /// <summary>
+    /// Gets or sets the container of the transcoded video stream, if different from the source.
+    /// </summary>
+    public string? TranscodedVideoContainer { get; set; }
+
+    /// <summary>
     /// Gets or sets the codec of the transcoded audio stream, if different from the source.
     /// </summary>
     public string? TranscodedAudioCodec { get; set; }
@@ -260,16 +275,179 @@ public class PlaybackEntry
     public string? TranscodeReasonsJson { get; set; }
 
     /// <summary>
+    /// Gets or sets the progress of transcoding.
+    /// </summary>
+    public double? TranscodeCompletionPercentage { get; set; }
+
+    /// <summary>
+    /// Creates a new <see cref="PlaybackEntry"/> that represents the start of a playback span
+    /// based on a Jellyfin <see cref="PlaybackStartEventArgs"/>.
+    /// </summary>
+    /// <param name="eventArgs">
+    /// The playback start event containing media, user, client, and initial play state information.
+    /// </param>
+    /// <returns>
+    /// A <see cref="PlaybackEntry"/> initialized from the event and marked as an in-progress start.
+    /// </returns>
+    public static PlaybackEntry FromStartEvent(PlaybackStartEventArgs eventArgs)
+    {
+        var entry = FromEvent(eventArgs);
+        // For start events, set the start time and initial position.
+        entry.StartUtc = DateTime.UtcNow;
+        entry.StartPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
+        entry.IsCompleted = false;
+        entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
+        entry.IsPaused = false;
+        entry.EndUtc = null;
+        return entry;
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="PlaybackEntry"/> snapshot that represents an in-progress playback update
+    /// based on a Jellyfin <see cref="PlaybackProgressEventArgs"/>.
+    /// </summary>
+    /// <param name="existing">
+    /// The existing <see cref="PlaybackEntry"/> to update, or null to create a new one.
+    /// </param>
+    /// <param name="eventArgs">
+    /// The playback progress event containing the current playback position and state.
+    /// </param>
+    /// <returns>
+    /// A <see cref="PlaybackEntry"/> initialized from the event and updated with the latest position.
+    /// </returns>
+    public static PlaybackEntry FromProgressEvent(PlaybackEntry? existing, PlaybackProgressEventArgs eventArgs)
+    {
+        var entry = FromEvent(eventArgs);
+        // For progress events, set the current position.
+        entry.StartUtc = existing?.StartUtc ?? DateTime.UtcNow;
+        entry.StartPositionTicks = existing?.StartPositionTicks ?? 0;
+        entry.IsCompleted = false;
+        entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
+        entry.IsPaused = eventArgs.IsPaused;
+        entry.EndUtc = null;
+        return entry;
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="PlaybackEntry"/> that represents the end of a playback span
+    /// based on a Jellyfin <see cref="PlaybackStopEventArgs"/>.
+    /// </summary>
+    /// <param name="existing">
+    /// The existing <see cref="PlaybackEntry"/> to update, or null to create a new one.
+    /// </param>
+    /// <param name="eventArgs">
+    /// The playback stop event containing the final playback position and state.
+    /// </param>
+    /// <returns>
+    /// A <see cref="PlaybackEntry"/> initialized from the event and marked as completed.
+    /// </returns>
+    public static PlaybackEntry FromStopEvent(PlaybackEntry? existing, PlaybackStopEventArgs eventArgs)
+    {
+        var entry = existing ?? FromEvent(eventArgs);
+        // For stop events, set the end time and final position.
+        entry.StartUtc = existing?.StartUtc ?? DateTime.UtcNow;
+        entry.StartPositionTicks = existing?.StartPositionTicks ?? 0;
+        entry.IsCompleted = true;
+        entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
+        entry.IsPaused = false;
+        entry.EndUtc = DateTime.UtcNow;
+        return entry;
+    }
+
+    /// <summary>
+    /// Generates a unique playback identifier based on the session and media information from the provided <see cref="PlaybackProgressEventArgs"/>.
+    /// </summary>
+    /// <param name="eventArgs">The playback progress event arguments containing session and media info.</param>
+    /// <returns>A string representing the generated playback identifier.</returns>
+    public static Guid GeneratePlaybackId(PlaybackProgressEventArgs eventArgs)
+    {
+        var byt = Encoding.UTF8.GetBytes($"{eventArgs.Session.Id}-{eventArgs.Session.PlaylistItemId}-{eventArgs.MediaInfo.Id}");
+#pragma warning disable CA5351
+        var hash = MD5.HashData(byt);
+#pragma warning restore CA5351
+        return new Guid(hash);
+    }
+
+    /// <summary>
+    /// Populates this <see cref="PlaybackEntry"/> instance from the provided <see cref="PlaybackProgressEventArgs"/>.
+    /// </summary>
+    /// <param name="eventArgs">The playback progress event arguments to use for populating the entry.</param>
+    /// <returns>This <see cref="PlaybackEntry"/> instance after being populated from the event arguments.</returns>
+    private static PlaybackEntry FromEvent(PlaybackProgressEventArgs eventArgs)
+    {
+        // Console.WriteLine($"Full event {JsonSerializer.Serialize(eventArgs)}");
+
+        // TODO: Move to ContentType
+        var contentKind = eventArgs.MediaInfo.Type switch
+        {
+            BaseItemKind.Movie => ContentKind.Movie,
+            BaseItemKind.Episode => ContentKind.Episode,
+            _ => ContentKind.Other
+        };
+
+        var videoStream = eventArgs.MediaInfo.MediaStreams?
+            .FirstOrDefault(s => s.Type == MediaStreamType.Video);
+        var audioStream = eventArgs.MediaInfo.MediaStreams?
+            .FirstOrDefault(s => s.Type == MediaStreamType.Audio && s.Index == eventArgs.Session?.PlayState.AudioStreamIndex);
+        var subtitleStream = eventArgs.MediaInfo.MediaStreams?
+            .FirstOrDefault(s => s.Type == MediaStreamType.Subtitle && s.Index == eventArgs.Session?.PlayState.SubtitleStreamIndex);
+
+        return new PlaybackEntry
+        {
+            PlaybackId = GeneratePlaybackId(eventArgs),
+            ItemId = eventArgs.MediaInfo.Id,
+            ParentItemId = eventArgs.MediaInfo.ParentId,
+            ContentKind = contentKind,
+            Title = eventArgs.MediaInfo.Name,
+            Genres = eventArgs.MediaInfo.Genres != null ? new Collection<string>(eventArgs.MediaInfo.Genres) : [],
+            Year = eventArgs.MediaInfo.ProductionYear,
+            SeriesName = eventArgs.MediaInfo.SeriesName,
+            SeasonNumber = eventArgs.MediaInfo.ParentIndexNumber,
+            EpisodeNumber = eventArgs.MediaInfo.IndexNumber,
+            UserId = eventArgs.Users[0].Id,
+            UserName = eventArgs.Users[0].Username,
+            ClientName = eventArgs.ClientName,
+            DeviceName = eventArgs.DeviceName,
+            DeviceId = eventArgs.DeviceId,
+            RuntimeTicks = eventArgs.MediaInfo.RunTimeTicks,
+            VideoCodec = videoStream?.Codec,
+            VideoContainer = eventArgs.MediaInfo.Container,
+            VideoRange = videoStream?.VideoRange.ToString(),
+            VideoBitrate = videoStream?.BitRate,
+            VideoBitDepth = videoStream?.BitDepth,
+            VideoHeight = videoStream?.Height,
+            VideoWidth = videoStream?.Width,
+            AudioLanguage = audioStream?.Language,
+            AudioCodec = audioStream?.Codec,
+            AudioLayout = audioStream?.ChannelLayout,
+            AudioBitrate = audioStream?.BitRate,
+            AudioSampleRate = audioStream?.SampleRate,
+            SubtitleIsForced = subtitleStream?.IsForced,
+            SubtitleIsHearingImpaired = subtitleStream?.IsHearingImpaired,
+            SubtitleCodec = subtitleStream?.Codec,
+            SubtitleLanguage = subtitleStream?.Language,
+            IsVideoDirect = eventArgs.Session?.TranscodingInfo?.IsVideoDirect ?? true,
+            IsAudioDirect = eventArgs.Session?.TranscodingInfo?.IsAudioDirect ?? true,
+            TranscodeBitrate = eventArgs.Session?.TranscodingInfo?.Bitrate,
+            HardwareAcceleration = eventArgs.Session?.TranscodingInfo?.HardwareAccelerationType?.ToString(),
+            TranscodedVideoCodec = eventArgs.Session?.TranscodingInfo?.VideoCodec,
+            TranscodedVideoContainer = eventArgs.Session?.TranscodingInfo?.Container,
+            TranscodedAudioCodec = eventArgs.Session?.TranscodingInfo?.AudioCodec,
+            TranscodeReasonsJson = System.Text.Json.JsonSerializer.Serialize(eventArgs.Session?.TranscodingInfo?.TranscodeReasons),
+            TranscodeCompletionPercentage = eventArgs.Session?.TranscodingInfo?.CompletionPercentage
+        };
+    }
+
+    /// <summary>
     /// Converts this stored playback entry into an API-facing <see cref="PlaybackEntryDto"/>.
     /// </summary>
     /// <returns>A new <see cref="PlaybackEntryDto"/> instance populated from this entry.</returns>
     public PlaybackEntryDto ToDto()
     {
-        var identity = new ContentIdentityDto
+        var identity = new ContentIdentityDto(contentKind: ContentKind, itemId: ItemId, parentItemId: ParentItemId)
         {
-            DisplayTitle = DisplayTitle,
-            PrimaryImageUrl = PrimaryImageUrl,
-            PrimaryGenre = PrimaryGenre,
+            Title = Title,
+            Genres = Genres,
             Year = Year,
             SeriesName = SeriesName,
             SeasonNumber = SeasonNumber,
@@ -280,7 +458,6 @@ public class PlaybackEntry
         {
             UserId = UserId,
             UserName = UserName,
-            UserImageUrl = UserImageUrl
         };
 
         var client = new ClientInfoDto
@@ -297,8 +474,6 @@ public class PlaybackEntry
             RuntimeTicks = RuntimeTicks,
             StartPositionTicks = StartPositionTicks,
             EndPositionTicks = EndPositionTicks,
-            StartPercentage = StartPercentage,
-            EndPercentage = EndPercentage
         };
 
         VideoTrackDto? video = null;
@@ -367,8 +542,10 @@ public class PlaybackEntry
             || HardwareAcceleration is not null
             || TranscodeBitrate.HasValue
             || TranscodedVideoCodec is not null
+            || TranscodedVideoContainer is not null
             || TranscodedAudioCodec is not null
-            || !string.IsNullOrEmpty(TranscodeReasonsJson))
+            || !string.IsNullOrEmpty(TranscodeReasonsJson)
+            || TranscodeCompletionPercentage.HasValue)
         {
             IReadOnlyList<string> reasons;
             if (string.IsNullOrWhiteSpace(TranscodeReasonsJson))
@@ -390,10 +567,11 @@ public class PlaybackEntry
             }
 
             VideoTrackDto? transcodedVideo = null;
-            if (TranscodedVideoCodec is not null)
+            if (TranscodedVideoContainer is not null || TranscodedVideoCodec is not null || TranscodeBitrate.HasValue)
             {
                 transcodedVideo = new VideoTrackDto
                 {
+                    Container = TranscodedVideoContainer,
                     Codec = TranscodedVideoCodec,
                     Bitrate = TranscodeBitrate
                 };
@@ -417,22 +595,22 @@ public class PlaybackEntry
                 Bitrate = TranscodeBitrate,
                 TranscodedVideo = transcodedVideo,
                 TranscodedAudio = transcodedAudio,
-                Reasons = reasons
+                Reasons = reasons,
+                CompletionPercentage = TranscodeCompletionPercentage
             };
         }
 
-        return new PlaybackEntryDto
-        {
-            ItemId = ItemId,
-            ContentKind = ContentKind,
-            Identity = identity,
-            User = user,
-            Client = client,
-            Timing = timing,
-            Streams = streams,
-            Transcoding = transcoding,
-            IsCompleted = IsCompleted,
-            IsPaused = IsPaused
-        };
+        return new PlaybackEntryDto(
+            itemId: ItemId,
+            parentItemId: ParentItemId,
+            contentKind: ContentKind,
+            identity: identity,
+            user: user,
+            client: client,
+            timing: timing,
+            streams: streams,
+            transcoding: transcoding,
+            isCompleted: IsCompleted,
+            isPaused: IsPaused);
     }
 }

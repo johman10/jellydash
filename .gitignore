@@ -54,3 +54,4 @@ plugin/Jellyfin.Plugin.Jellydash/obj
 
 plugin/Jellyfin.Plugin.Jellydash.Tests/bin
 plugin/Jellyfin.Plugin.Jellydash.Tests/obj
+plugin/Jellyfin.Plugin.Jellydash.Tests/TestResults

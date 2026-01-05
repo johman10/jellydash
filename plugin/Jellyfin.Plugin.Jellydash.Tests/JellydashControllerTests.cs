@@ -18,17 +18,17 @@ public sealed class JellydashControllerTests
         DatabaseHelper.Initialize();
     }
 
-    private static PlaybackEntryRepository CreateRepository()
+    private static async Task<PlaybackEntryRepository> CreateRepositoryAsync()
     {
         var repo = new PlaybackEntryRepository(DatabaseHelper);
-        repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None).GetAwaiter().GetResult();
+        await repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None);
         return repo;
     }
 
     [Fact]
     public async Task GetActivity_InvalidCursor_ReturnsBadRequest()
     {
-        var repo = CreateRepository();
+        var repo = await CreateRepositoryAsync();
         var controller = new JellydashController(repo);
 
         var result = await controller.GetActivity(null, "not-a-valid-cursor", CancellationToken.None);
@@ -40,7 +40,7 @@ public sealed class JellydashControllerTests
     [Fact]
     public async Task GetActivity_RespectsDefaultLimitAndOrdering()
     {
-        var repo = CreateRepository();
+        var repo = await CreateRepositoryAsync();
 
         // Insert more than the default limit (20) with increasing EndUtc.
         var now = DateTime.UtcNow;
@@ -50,17 +50,17 @@ public sealed class JellydashControllerTests
             var startUtc = endUtc.AddMinutes(-10);
             var entry = new PlaybackEntry
             {
+                PlaybackId = Guid.NewGuid(),
                 ItemId = Guid.NewGuid(),
                 ContentKind = ContentKind.Movie,
-                DisplayTitle = $"Item-{i}",
+                Title = $"Item-{i}",
                 UserId = Guid.NewGuid(),
                 UserName = "User",
                 ClientName = "TestClient",
                 DeviceName = "TestDevice",
                 StartUtc = startUtc,
                 EndUtc = endUtc,
-                StartPercentage = 0,
-                EndPercentage = 100
+                IsCompleted = true
             };
 
             await repo.AppendAsync(entry, CancellationToken.None);
@@ -83,7 +83,7 @@ public sealed class JellydashControllerTests
     [Fact]
     public async Task GetActivity_UsesCursorForPaging()
     {
-        var repo = CreateRepository();
+        var repo = await CreateRepositoryAsync();
 
         var now = DateTime.UtcNow;
         for (int i = 0; i < 5; i++)
@@ -92,17 +92,17 @@ public sealed class JellydashControllerTests
             var startUtc = endUtc.AddMinutes(-10);
             var entry = new PlaybackEntry
             {
+                PlaybackId = Guid.NewGuid(),
                 ItemId = Guid.NewGuid(),
                 ContentKind = ContentKind.Movie,
-                DisplayTitle = $"Item-{i}",
+                Title = $"Item-{i}",
                 UserId = Guid.NewGuid(),
                 UserName = "User",
                 ClientName = "TestClient",
                 DeviceName = "TestDevice",
                 StartUtc = startUtc,
                 EndUtc = endUtc,
-                StartPercentage = 0,
-                EndPercentage = 100
+                IsCompleted = true
             };
 
             await repo.AppendAsync(entry, CancellationToken.None);
@@ -117,7 +117,7 @@ public sealed class JellydashControllerTests
         var firstCursor = GetNextCursor(firstOk);
 
         Assert.Equal(2, firstItems.Count);
-        Assert.False(string.IsNullOrEmpty(firstCursor));
+        Assert.NotNull(firstCursor);
 
         // Second page using cursor.
         var secondResult = await controller.GetActivity(2, firstCursor, CancellationToken.None);
@@ -126,6 +126,8 @@ public sealed class JellydashControllerTests
         var secondCursor = GetNextCursor(secondOk);
 
         Assert.Equal(2, secondItems.Count);
+        Assert.NotNull(secondCursor);
+        Assert.NotEqual(firstCursor, secondCursor);
 
         // Ensure no overlap between pages and overall ordering by EndUtc.
         Assert.Empty(firstItems.Select(i => i.Timing.EndUtc).Intersect(secondItems.Select(i => i.Timing.EndUtc)));

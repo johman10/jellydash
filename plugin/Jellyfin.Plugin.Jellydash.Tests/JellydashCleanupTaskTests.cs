@@ -57,7 +57,7 @@ public sealed class JellydashCleanupTaskTests : IDisposable
     {
         // Arrange
         var repo = new PlaybackEntryRepository(DatabaseHelper);
-        await SeedSingleEntryAsync(repo);
+        var playbackId = await SeedSingleEntryAsync(repo);
 
         var fakePlugin = new FakePlugin(new PluginConfiguration
         {
@@ -69,15 +69,16 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         var task = new JellydashCleanupTask(repo);
         var progress = new TestProgress();
 
-        var beforeEntries = await repo.GetRecentAsync(DateTime.MinValue, CancellationToken.None);
+        var beforeEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, CancellationToken.None);
+        Assert.NotNull(beforeEntry);
 
         // Act
         await task.ExecuteAsync(progress, CancellationToken.None);
+        Assert.Equal(1.0, progress.Value);
 
         // Assert: cleanup did not delete any entries when retention is disabled.
-        var entries = await repo.GetRecentAsync(DateTime.MinValue, CancellationToken.None);
-        Assert.Equal(beforeEntries.Count, entries.Count);
-        Assert.Equal(1.0, progress.Value);
+        var afterEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, CancellationToken.None);
+        Assert.NotNull(afterEntry);
     }
 
     [Fact]
@@ -87,8 +88,8 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         var repo = new PlaybackEntryRepository(DatabaseHelper);
 
         // One very old entry and one recent entry.
-        await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-60));
-        await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-1));
+        var olderPlaybackId = await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-60));
+        var newerPlaybackId = await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-1));
 
         var fakePlugin = new FakePlugin(new PluginConfiguration
         {
@@ -102,38 +103,40 @@ public sealed class JellydashCleanupTaskTests : IDisposable
 
         // Act
         await task.ExecuteAsync(progress, CancellationToken.None);
+        Assert.Equal(1.0, progress.Value);
+
+        var newerEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(newerPlaybackId, CancellationToken.None);
+        Assert.NotNull(newerEntry);
 
         // Assert: no entries older than the retention window remain.
-        var entries = await repo.GetRecentAsync(DateTime.MinValue, CancellationToken.None);
-        var cutoff = DateTime.UtcNow - TimeSpan.FromDays(30);
-        Assert.All(entries, e => Assert.True(e.EndUtc >= cutoff));
-        Assert.Equal(1.0, progress.Value);
+        var olderEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(olderPlaybackId, CancellationToken.None);
+        Assert.Null(olderEntry);
     }
 
-    private static async Task SeedSingleEntryAsync(PlaybackEntryRepository repo)
+    private static async Task<Guid> SeedSingleEntryAsync(PlaybackEntryRepository repo)
     {
-        await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-1));
+        return await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-1));
     }
 
-    private static async Task SeedEntryAsync(PlaybackEntryRepository repo, DateTime endUtc)
+    private static async Task<Guid> SeedEntryAsync(PlaybackEntryRepository repo, DateTime endUtc)
     {
         var startUtc = endUtc.AddMinutes(-10);
         var entry = new Models.PlaybackEntry
         {
+            PlaybackId = Guid.NewGuid(),
             ItemId = Guid.NewGuid(),
             ContentKind = Models.ContentKind.Movie,
-            DisplayTitle = "Item",
+            Title = "Item",
             UserId = Guid.NewGuid(),
             UserName = "User",
             ClientName = "TestClient",
             DeviceName = "TestDevice",
             StartUtc = startUtc,
             EndUtc = endUtc,
-            StartPercentage = 0,
-            EndPercentage = 100
         };
 
         await repo.AppendAsync(entry, CancellationToken.None);
+        return entry.PlaybackId;
     }
 
     private sealed class TestProgress : IProgress<double>

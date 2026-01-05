@@ -65,21 +65,28 @@ High‑level pieces:
 
 - **Playback history model**
 	- `Models/PlaybackEntry.cs` defines a single contiguous playback span for a user and item as it is stored in SQLite.
+	- Each span is keyed by a generated `PlaybackId`, which is a GUID derived from the Jellyfin session ID, playlist item ID, and item ID. Doesn't ensure uniqueness, but is the best available. Once a PlaybackEntry is marked as completed it will no longer be updated to minimise the impact of the non-uniqueness.
 	- `Models/PlaybackEntryDto.cs` and related DTOs (for identity, user, client, timing, streams, and transcoding) define the API shape returned to the Jellydash UI.
 	- Fields are chosen to map cleanly onto the Flutter `Session` / `CurrentActivityCard` UI: user id + name, item title/series/season/episode/year, client + device, span start/end, positions and percentages, bitrate, and detailed stream/transcoding information.
+	- Timing and completion semantics are handled in the model and DTOs, with percentage calculations done in the DTO layer (not stored in the DB). Completion is determined using a 95% watched threshold.
+	- Dapper type handlers for `Guid` and `Collection<string>` are registered to ensure correct mapping between C# models and the SQLite schema.
 
 - **Event consumers (playback tracking)**
-	- `Events/ActivityTracker.cs` implements:
+	- `Events/PlaybackTracker.cs` implements:
 		- `IEventConsumer<PlaybackStartEventArgs>`
+		- `IEventConsumer<PlaybackProgressEventArgs>`
 		- `IEventConsumer<PlaybackStopEventArgs>`
 	- On **playback start**:
 		- Filters to supported item types (`Movie`, `Episode`).
-		- Extracts `BaseItemDto` + `PlaybackStartEventArgs` data (user, item, series/season/episode, runtime ticks, starting position, client, device, and transcoding info from the session).
-		- Builds an in‑memory `PlaybackEntry` seed keyed by play session (`playSessionId` if available; otherwise `sessionId:itemId`).
+		- Generates a non-unique `PlaybackId` from the session ID, playlist item ID, and item ID.
+		- Builds and persists a new `PlaybackEntry` for the session, marking it as in-progress.
+	- On **playback progress**:
+		- Looks up the existing `PlaybackEntry` by `PlaybackId` or creates a new one if the start event was missed.
+		- Updates the entry with the latest position and persists it.
 	- On **playback stop**:
-		- Looks up and clears the matching seed (or synthesizes one if start was missed).
-		- Uses the stop position and runtime ticks to compute `StartPositionTicks`, `EndPositionTicks`, `StartPercentage`, and `EndPercentage`, and determines whether the span is considered completed.
-		- Persists a finalized `PlaybackEntry` through the playback entry repository (see below).
+		- Looks up the existing `PlaybackEntry` by `PlaybackId` or creates a new one if needed.
+		- Marks the entry as completed and persists it.
+	- All playback tracking state is now persisted in SQLite; there is no in-memory session state.
 
 - **Playback storage**
 	- `Services/PlaybackEntryRepository.cs` is a SQLite‑backed store for `PlaybackEntry` records.
@@ -87,14 +94,17 @@ High‑level pieces:
 		- Dedicated database file `jellydash.db` under the Jellyfin data path, in `plugins/Jellydash/jellydash.db`.
 		- Schema is managed via versioned SQL migration scripts in `Migrations/` (e.g. `001_Initial.sql`), with a single `PlaybackEntries` table.
 	- Key operations:
-		- `AppendAsync(PlaybackEntry)` — append a new span (used by `ActivityTracker`).
-		- `GetPageAsync(int limit, long? beforeId, DateTime? beforeEndUtc, CancellationToken)` — paged, most‑recent‑first query used by the `/Jellydash/history` endpoint.
-		- `GetRecentAsync(DateTime cutoffUtc, CancellationToken)` — convenience query for entries since a given time.
-		- `DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken)` — delete rows older than the cutoff (used by the scheduled cleanup task).
+		- `AppendAsync(PlaybackEntry)` — simple append helper (used primarily in tests).
+		- `Upsert(PlaybackEntry)` — insert or update a row keyed by `PlaybackId`.
+		- `GetRecentlyIncompletedByPlaybackIdAsync(Guid playbackId, ...)` — lookup the current in-progress row for a given playback instance.
+		- `GetRecentlyCompletedByPlaybackIdAsync(Guid playbackId, ...)` — lookup the completed row for a given playback instance.
+		- `GetPageAsync(int limit, int? beforeId, DateTime? beforeEndUtc, CancellationToken)` — paged, most‑recent‑first query used by the `/Jellydash/history` endpoint. This now filters to `IsCompleted = 1` so only completed spans appear in history.
+		- `DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken)` — delete rows with `EndUtc < cutoffUtc` (completed or not), used by the scheduled cleanup task.
 	- Concurrency:
 		- Uses a static `SemaphoreSlim` guard to ensure DB access is serialized across threads.
 	- Migrations:
 		- On startup, reads `PRAGMA user_version` from `jellydash.db` and applies any `.sql` migration scripts with a higher version number, in order, updating `user_version` after each script.
+	- Dapper type handlers for `Guid` and `Collection<string>` are registered at startup to ensure correct mapping between C# and SQLite.
 
 - **Service registration / event wiring**
 	- `Services/JellydashServiceRegistrator.cs` implements `MediaBrowser.Controller.Plugins.IPluginServiceRegistrator`.
@@ -117,6 +127,7 @@ High‑level pieces:
 			- Query parameters: `limit` (max 100, default 20) and optional `cursor`.
 			- Response shape: `{ "items": PlaybackEntryDto[], "nextCursor": string | null }`.
 			- Cursors are opaque Base64 tokens derived from the last entry's `EndUtc` and database id.
+			- Only completed spans are included (`IsCompleted = true`); ongoing entries for active sessions are intentionally excluded from this endpoint and should be accessed via dedicated APIs that use `GetOngoingAsync`.
 	- Responses return the Jellydash‑specific `PlaybackEntryDto` model; the Flutter client can use this directly to drive its `Session`/card models.
 
 - **Scheduled cleanup**
