@@ -2,10 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/screens/settings_screen.dart';
 import 'package:jellydash/services/app_settings_service.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   Widget wrapSettings(AppSettings settings) {
-    return MaterialApp(home: SettingsScreen(appSettings: settings));
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => SettingsScreen(appSettings: settings),
+        ),
+      ],
+      initialLocation: '/',
+    );
+    return MaterialApp.router(
+      routerDelegate: router.routerDelegate,
+      routeInformationParser: router.routeInformationParser,
+      routeInformationProvider: router.routeInformationProvider,
+    );
   }
 
   AppSettings baseSettings({

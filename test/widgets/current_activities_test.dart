@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/types/session.dart';
-import 'package:jellydash/widgets/current_activities.dart';
+import 'package:jellydash/widgets/now_playing.dart';
 
 void main() {
   group('CurrentActivities layout', () {
@@ -36,7 +36,7 @@ void main() {
         const CurrentActivities(isLoading: false, sessions: []),
       ));
 
-      expect(find.text('No current activities.'), findsOneWidget);
+      expect(find.text('It\'s quiet... too quiet.'), findsOneWidget);
     });
 
     testWidgets('renders one column on narrow width', (WidgetTester tester) async {
