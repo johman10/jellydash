@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Jellydash.Models;
@@ -16,9 +19,16 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
     /// </summary>
     [Route("Jellydash")]
     [ApiController]
+    [Produces("application/json")]
     public class JellydashController : ControllerBase
     {
         private readonly PlaybackEntryRepository _activityRepository;
+
+        private static readonly JsonSerializerOptions JsonResultOptions = new(JsonSerializerDefaults.Web)
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JellydashController"/> class.
@@ -32,13 +42,36 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
         /// <summary>
         /// Returns a page of recent playback entries using cursor-based pagination.
         /// </summary>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A page of recent activity entries and a cursor for the next page, if any.</returns>
+        [HttpGet("now-playing")]
+        [Authorize]
+        public async Task<IActionResult> GetNowPlaying(CancellationToken cancellationToken)
+        {
+            var entries = await _activityRepository
+                .GetNowPlayingAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            var dtoItems = new List<PlaybackEntryDto>(entries.Count);
+            foreach (var entry in entries)
+            {
+                dtoItems.Add(PlaybackEntryDto.FromPlaybackEntry(entry));
+            }
+
+            // Return with snake_case serialization
+            return new JsonResult(dtoItems, JsonResultOptions);
+        }
+
+        /// <summary>
+        /// Returns a page of recent playback entries using cursor-based pagination.
+        /// </summary>
         /// <param name="limit">Maximum number of entries to return (max 100, default 20).</param>
         /// <param name="cursor">An opaque cursor returned from a previous page.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A page of recent activity entries and a cursor for the next page, if any.</returns>
         [HttpGet("history")]
         [Authorize]
-        public async Task<IActionResult> GetActivity([FromQuery] int? limit, [FromQuery] string? cursor, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetHistory([FromQuery] int? limit, [FromQuery] string? cursor, CancellationToken cancellationToken)
         {
             var pageSize = limit.HasValue && limit.Value > 0 ? Math.Min(limit.Value, 100) : 20;
 
@@ -58,7 +91,7 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
             }
 
             var (entries, lastId, lastEndUtc) = await _activityRepository
-                .GetPageAsync(pageSize, beforeId, beforeEndUtc, cancellationToken)
+                .GetHistoryPageAsync(pageSize, beforeId, beforeEndUtc, cancellationToken)
                 .ConfigureAwait(false);
 
             string? nextCursor = null;
@@ -67,17 +100,14 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
                 nextCursor = EncodeCursor(lastEndUtc.Value, lastId.Value);
             }
 
-            var dtoItems = new List<PlaybackEntryDto>(entries.Count);
+            var dtoList = new List<PlaybackEntryDto>(entries.Count);
             foreach (var entry in entries)
             {
-                dtoItems.Add(entry.ToDto());
+                dtoList.Add(PlaybackEntryDto.FromPlaybackEntry(entry));
             }
 
-            return Ok(new
-            {
-                items = dtoItems,
-                nextCursor
-            });
+            var dtoItems = new Collection<PlaybackEntryDto>(dtoList);
+            return new JsonResult(new HistoryResponse(items: dtoItems, nextCursor: nextCursor), JsonResultOptions);
         }
 
         private static string EncodeCursor(DateTime endUtc, long id)

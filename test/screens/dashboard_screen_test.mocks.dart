@@ -53,9 +53,9 @@ class MockJellyfinApiService extends _i1.Mock
       ) as String);
 
   @override
-  _i4.Future<List<_i5.Session>> fetchCurrentSessions() => (super.noSuchMethod(
+  _i4.Future<List<_i5.Session>> fetchNowPlaying() => (super.noSuchMethod(
         Invocation.method(
-          #fetchCurrentSessions,
+          #fetchNowPlaying,
           [],
         ),
         returnValue: _i4.Future<List<_i5.Session>>.value(<_i5.Session>[]),

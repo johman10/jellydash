@@ -33,7 +33,7 @@ void main() {
 
     testWidgets('shows message when no sessions', (WidgetTester tester) async {
       await tester.pumpWidget(wrapWithMaterial(
-        const CurrentActivities(isLoading: false, sessions: []),
+        const NowPlaying(isLoading: false, nowPlayingEntries: []),
       ));
 
       expect(find.text('It\'s quiet... too quiet.'), findsOneWidget);
@@ -45,7 +45,7 @@ void main() {
       // Use a tall surface so the column has enough vertical space
       await tester.binding.setSurfaceSize(const Size(320, 1200));
       await tester.pumpWidget(wrapWithMaterial(
-        CurrentActivities(isLoading: false, sessions: sessions),
+        NowPlaying(isLoading: false, nowPlayingEntries: sessions),
       ));
 
       // All cards should be stacked vertically; we just assert they all exist.
@@ -59,7 +59,7 @@ void main() {
 
       await tester.binding.setSurfaceSize(const Size(1200, 800));
       await tester.pumpWidget(wrapWithMaterial(
-        CurrentActivities(isLoading: false, sessions: sessions),
+        NowPlaying(isLoading: false, nowPlayingEntries: sessions),
       ));
 
       for (var i = 0; i < sessions.length; i++) {

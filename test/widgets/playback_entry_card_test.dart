@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/types/session.dart';
-import 'package:jellydash/widgets/current_activity_card.dart';
+import 'package:jellydash/widgets/playback_entry_card.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
 
 void main() {
@@ -53,7 +53,7 @@ void main() {
     testWidgets('shows season and episode when both are > 0', (tester) async {
       final session = baseSession(season: 1, episode: 2, year: 2024);
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.text('S1 · E2'), findsOneWidget);
       expect(find.text('2024'), findsNothing);
@@ -62,7 +62,7 @@ void main() {
     testWidgets('shows year when no season/episode but year is set', (tester) async {
       final session = baseSession(season: 0, episode: 0, year: 2024);
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.text('2024'), findsOneWidget);
       expect(find.textContaining('S0'), findsNothing);
@@ -71,7 +71,7 @@ void main() {
     testWidgets('shows neither season/episode nor year when not provided', (tester) async {
       final session = baseSession(season: 0, episode: 0, year: null);
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.textContaining('S0'), findsNothing);
       expect(find.text('null'), findsNothing);
@@ -85,7 +85,7 @@ void main() {
         duration: const Duration(minutes: 10),
       );
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.textContaining('7 min left'), findsOneWidget);
     });
@@ -97,7 +97,7 @@ void main() {
         duration: const Duration(minutes: 10),
       );
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.textContaining('0 min left'), findsOneWidget);
     });
@@ -108,7 +108,7 @@ void main() {
         (tester) async {
       final session = baseSession(bitrate: 0);
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.textContaining('bps'), findsNothing);
       expect(find.textContaining('kbps'), findsNothing);
@@ -119,7 +119,7 @@ void main() {
         (tester) async {
       final session = baseSession(bitrate: 2500000);
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.text('2.5Mbps'), findsOneWidget);
     });
@@ -134,7 +134,7 @@ void main() {
       );
       final session = baseSession(transcodingInfo: transcodingInfo);
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.text('V'), findsOneWidget);
       expect(find.text('A'), findsOneWidget);
@@ -148,7 +148,7 @@ void main() {
       );
       final session = baseSession(transcodingInfo: transcodingInfo);
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.text('V'), findsNothing);
       expect(find.text('A'), findsNothing);
@@ -168,7 +168,7 @@ void main() {
         transcodingInfo: transcodingInfo,
       );
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.text('A'), findsOneWidget);
     });
@@ -176,7 +176,7 @@ void main() {
     testWidgets('uses PosterFallback when no imageUrl', (tester) async {
       final session = baseSession(imageUrl: '');
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       final iconFinder = find.byIcon(Icons.movie);
       expect(iconFinder, findsOneWidget);
@@ -192,7 +192,7 @@ void main() {
         (tester) async {
       final session = baseSession(isPaused: true);
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.byIcon(Icons.pause_circle_filled), findsOneWidget);
     });
@@ -201,7 +201,7 @@ void main() {
         (tester) async {
       final session = baseSession(isPaused: false);
 
-      await tester.pumpWidget(wrap(CurrentActivityCard(session: session)));
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.byIcon(Icons.pause_circle_filled), findsNothing);
     });

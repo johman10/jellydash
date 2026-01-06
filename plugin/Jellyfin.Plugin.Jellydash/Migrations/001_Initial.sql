@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS PlaybackEntries (
     -- User
     UserId                      TEXT    NOT NULL,
     UserName                    TEXT    NOT NULL,
+    UserPrimaryImageTag         TEXT    NULL,
 
     -- Client
     ClientName                  TEXT    NOT NULL,

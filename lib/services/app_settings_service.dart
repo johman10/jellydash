@@ -5,11 +5,13 @@ class AppSettings {
   final String jellyfinBaseUrl;
   final String jellyfinApiKey;
   final int pollingInterval;
+  final bool usePluginApi;
 
   AppSettings({
     required this.jellyfinBaseUrl,
     required this.jellyfinApiKey,
     required this.pollingInterval,
+    required this.usePluginApi,
   });
 }
 
@@ -22,6 +24,7 @@ class AppSettingsService {
   static const String jellyfinBaseUrlKey = 'jellyfin_baseUrl';
   static const String jellyfinApiKeyKey = 'jellyfin_apiKey';
   static const String pollingIntervalKey = 'pollingInterval';
+  static const String usePluginApiKey = 'usePluginApi';
 
   SharedPreferences? _prefs;
 
@@ -55,7 +58,7 @@ class AppSettingsService {
   /// Loads the polling interval (seconds).
   Future<int> loadPollingInterval() async {
     return _prefs?.getInt(pollingIntervalKey) ??
-        int.parse(dotenv.get('DEFAULT_POLLING_INTERVAL', fallback: '10'));
+        dotenv.getInt('DEFAULT_POLLING_INTERVAL', fallback: 10);
   }
 
   /// Saves the polling interval (seconds).
@@ -63,15 +66,28 @@ class AppSettingsService {
     await _prefs?.setInt(pollingIntervalKey, interval);
   }
 
+  /// Loads the use plugin API flag.
+  Future<bool> loadUsePluginApi() async {
+    return _prefs?.getBool(usePluginApiKey) ??
+        dotenv.getBool('DEFAULT_USE_PLUGIN_API', fallback: false);
+  }
+
+  /// Saves the use plugin API flag.
+  Future<void> saveUsePluginApi(bool usePluginApi) async {
+    await _prefs?.setBool(usePluginApiKey, usePluginApi);
+  }
+
   Future<AppSettings> loadSettings() async {
     final baseUrl = await loadJellyfinBaseUrl();
     final apiKey = await loadJellyfinApiKey();
     final pollingInterval = await loadPollingInterval();
+    final usePluginApi = await loadUsePluginApi();
 
     return AppSettings(
       jellyfinBaseUrl: baseUrl,
       jellyfinApiKey: apiKey,
       pollingInterval: pollingInterval,
+      usePluginApi: usePluginApi,
     );
   }
 }

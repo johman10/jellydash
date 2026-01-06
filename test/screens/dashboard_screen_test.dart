@@ -81,7 +81,7 @@ void main() {
     });
 
     testWidgets('renders without error', (tester) async {
-      when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
+      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
             baseSession(
               userName: 'TestUser',
               name: 'Test Series',
@@ -100,7 +100,7 @@ void main() {
     });
 
     testWidgets('shows loading indicator and activities', (tester) async {
-      when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
+      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
             baseSession(
               userName: 'TestUser',
               name: 'Test Series',
@@ -117,13 +117,13 @@ void main() {
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       await tester.pump();
-      expect(find.byType(CurrentActivities), findsOneWidget);
+      expect(find.byType(NowPlaying), findsOneWidget);
     });
 
     testWidgets('shows updated sessions when they change', (tester) async {
       const pollingInterval = 1;
 
-      when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
+      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
             baseSession(
               userName: 'User1',
               name: 'Show1',
@@ -144,7 +144,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('User1'), findsOneWidget);
 
-      when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
+      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
             baseSession(
               userName: 'User2',
               name: 'Show2',
@@ -163,7 +163,7 @@ void main() {
     });
 
     testWidgets('shows RecentActivities', (tester) async {
-      when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
+      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
             baseSession(
               userName: 'TestUser',
               name: 'Test Series',
@@ -182,7 +182,7 @@ void main() {
     });
 
     testWidgets('shows CurrentActivities with mock session', (tester) async {
-      when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
+      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
             baseSession(
               userName: 'TestUser',
               name: 'Test Series',
@@ -203,7 +203,7 @@ void main() {
     });
 
     testWidgets('shows no activities when session list is empty', (tester) async {
-      when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => []);
+      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => []);
 
       await tester.pumpWidget(wrapDashboard(mockApiService));
       await tester.pumpAndSettle();
@@ -212,7 +212,7 @@ void main() {
     });
 
     testWidgets('shows multiple sessions', (tester) async {
-      when(mockApiService.fetchCurrentSessions()).thenAnswer((_) async => [
+      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
             baseSession(
               userName: 'User1',
               name: 'Show1',

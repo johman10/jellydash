@@ -7,6 +7,7 @@ using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
 using MediaBrowser.Controller.Events;
+using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
@@ -17,7 +18,11 @@ namespace Jellyfin.Plugin.Jellydash.Events;
 /// <summary>
 /// Records Jellydash playback entries when playback starts, progresses, and stops.
 /// </summary>
-public class PlaybackTracker : IEventConsumer<PlaybackStartEventArgs>, IEventConsumer<PlaybackProgressEventArgs>, IEventConsumer<PlaybackStopEventArgs>
+public class PlaybackTracker :
+    IEventConsumer<PlaybackStartEventArgs>,
+    IEventConsumer<PlaybackProgressEventArgs>,
+    IEventConsumer<PlaybackStopEventArgs>,
+    IEventConsumer<SessionEndedEventArgs>
 {
     private readonly ILogger<PlaybackTracker> _logger;
     private readonly PlaybackEntryRepository _repository;
@@ -65,7 +70,8 @@ public class PlaybackTracker : IEventConsumer<PlaybackStartEventArgs>, IEventCon
                 return;
             }
 
-            var existing = await _repository.GetRecentlyIncompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(eventArgs), default).ConfigureAwait(false);
+            var playbackId = PlaybackEntry.GeneratePlaybackId(eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id);
+            var existing = await _repository.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, default).ConfigureAwait(false);
             var entry = PlaybackEntry.FromProgressEvent(existing, eventArgs);
             await _repository.Upsert(entry, default).ConfigureAwait(false);
         }
@@ -86,13 +92,42 @@ public class PlaybackTracker : IEventConsumer<PlaybackStartEventArgs>, IEventCon
                 return;
             }
 
-            var existing = await _repository.GetRecentlyIncompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(eventArgs), default).ConfigureAwait(false);
+            var playbackId = PlaybackEntry.GeneratePlaybackId(eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id);
+            var existing = await _repository.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, default).ConfigureAwait(false);
             var entry = PlaybackEntry.FromStopEvent(existing, eventArgs);
             await _repository.Upsert(entry, default).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling playback stop event for Jellydash activity.");
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task OnEvent(SessionEndedEventArgs eventArgs)
+    {
+        try
+        {
+            var session = eventArgs.Argument;
+            var media = session.NowPlayingItem;
+            if (media is null || !IsSupportedItemType(media) || session.UserId == Guid.Empty)
+            {
+                return;
+            }
+
+            var playbackId = PlaybackEntry.GeneratePlaybackId(session.Id, session.PlaylistItemId, media.Id);
+            var existing = await _repository.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, default).ConfigureAwait(false);
+            if (existing is null)
+            {
+                return;
+            }
+
+            var entry = PlaybackEntry.FromSessionEndedEvent(existing, eventArgs);
+            await _repository.Upsert(existing, default).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling session ended event for Jellydash activity.");
         }
     }
 

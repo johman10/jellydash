@@ -26,11 +26,13 @@ void main() {
     String jellyfinBaseUrl = 'http://localhost:8096',
     String jellyfinApiKey = '',
     int pollingInterval = 10,
+    bool usePluginApi = false,
   }) {
     return AppSettings(
       jellyfinBaseUrl: jellyfinBaseUrl,
       jellyfinApiKey: jellyfinApiKey,
       pollingInterval: pollingInterval,
+      usePluginApi: usePluginApi,
     );
   }
 

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
-import 'package:jellydash/types/session.dart';
+import 'package:jellydash/types/playback_entry.dart';
 import 'dart:async';
-import '../services/jellyfin_api_service.dart';
+import '../services/api_service.dart';
 import '../widgets/now_playing.dart';
 import '../widgets/recent_activities.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final JellyfinApiService apiService;
+  final ApiService apiService;
   final int pollingInterval;
   const DashboardScreen({
     super.key,
@@ -21,8 +21,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  List<Session> _sessions = [];
+  List<PlaybackEntry> _nowPlayingEntries = [];
   bool _initialLoading = true;
+  Exception? _error;
   Timer? _pollingTimer;
 
   @override
@@ -38,35 +39,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _initialLoading = true;
     });
 
-    _fetchSessions();
+    _fetchNowPlaying();
     _pollingTimer =
         Timer.periodic(Duration(seconds: widget.pollingInterval), (timer) {
-      _fetchSessions();
+      _fetchNowPlaying();
     });
   }
 
-  Future<void> _fetchSessions() {
-    // TODO: Error handling.
-    // In case of an error add the appropriate state.
-    // Then show instructions to verify the configuration with a button to settings.
-    return widget.apiService.fetchCurrentSessions().then((data) {
-      data.sort((a, b) {
-        final aDateCreated = a.dateCreated;
-        final bDateCreated = b.dateCreated;
-        if (aDateCreated == null && bDateCreated == null) {
-          return 0;
-        }
-        if (aDateCreated == null) {
-          // Sessions without a creation date are shown after those with one.
-          return 1;
-        }
-        if (bDateCreated == null) {
-          return -1;
-        }
-        return bDateCreated.compareTo(aDateCreated);
-      });
+  Future<void> _fetchNowPlaying() {
+    return widget.apiService.fetchNowPlaying().then((data) {
       setState(() {
-        _sessions = data;
+        _nowPlayingEntries = data;
+        _initialLoading = false;
+      });
+    }).catchError((error) {
+      // TODO: Find a way to restart the pollingTimer when settings have been updated
+      // if ([
+      //   'NotFoundException',
+      //   'UnauthorizedException',
+      // ].contains(error.runtimeType.toString())) {
+      //   // Stop polling on critical errors
+      //   _pollingTimer?.cancel();
+      // }
+
+      setState(() {
+        _error = error as Exception?;
         _initialLoading = false;
       });
     });
@@ -95,12 +92,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
         ),
       ],
-      onRefresh: isTouchDevice ? _fetchSessions : null,
+      onRefresh: isTouchDevice ? _fetchNowPlaying : null,
       children: [
         SizedBox(
           width: double.infinity,
           child: Column(spacing: 16, children: [
-            CurrentActivities(isLoading: _initialLoading, sessions: _sessions),
+            NowPlaying(isLoading: _initialLoading, nowPlayingEntries: _nowPlayingEntries, error: _error),
             const RecentActivityCard(),
           ]),
         )
