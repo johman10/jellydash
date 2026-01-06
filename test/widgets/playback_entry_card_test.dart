@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jellydash/types/session.dart';
+import 'package:jellydash/types/playback_entry.dart';
 import 'package:jellydash/widgets/playback_entry_card.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
 
@@ -13,45 +13,66 @@ void main() {
     );
   }
 
-  Session baseSession({
-    String? name,
+  int ticksFromDuration(Duration duration) => duration.inMicroseconds * 10;
+
+  PlaybackEntry baseEntry({
+    String? title,
+    String? seriesName,
     int? season,
     int? episode,
     int? year,
     Duration? progress,
     Duration? duration,
     int? bitrate,
-    TranscodingInfo? transcodingInfo,
+    bool isVideoDirect = true,
+    bool isAudioDirect = true,
     String? userName,
     String? userImageUrl,
     String? imageUrl,
     bool isPaused = false,
   }) {
-    return Session(
-      userName: userName ?? 'User',
-      client: 'Web',
-      deviceName: 'Device',
-      name: name ?? 'Title',
-      season: season,
-      episode: episode,
-      year: year,
-      imageUrl: imageUrl ?? '',
-      video: SessionVideo(),
-      audio: SessionAudio(),
-      subtitles: SessionSubtitle(),
-      transcodingInfo: transcodingInfo ??
-          TranscodingInfo(video: SessionVideo(), audio: SessionAudio(), reasons: []),
-      progress: progress ?? const Duration(minutes: 1),
-      duration: duration ?? const Duration(minutes: 10),
-      bitrate: bitrate,
-      userImageUrl: userImageUrl,
+    final effectiveDuration = duration ?? const Duration(minutes: 10);
+    final effectiveProgress = progress ?? const Duration(minutes: 1);
+
+    return PlaybackEntry(
+      itemId: 'item1',
+      parentItemId: null,
+      contentKind: ContentKind.other,
+      identity: ContentIdentity(
+        primaryImageUrl: imageUrl,
+        title: title ?? 'Title',
+        seriesName: seriesName,
+        seasonNumber: season,
+        episodeNumber: episode,
+        year: year,
+      ),
+      user: UserInfo(
+        userId: 'user1',
+        userName: userName ?? 'User',
+        userImageUrl: userImageUrl,
+      ),
+      client: const ClientInfo(deviceName: 'Device', clientName: 'Web'),
+      timing: TimingInfo(
+        runtimeTicks: ticksFromDuration(effectiveDuration),
+        endPositionTicks: ticksFromDuration(effectiveProgress),
+      ),
+      streams: const StreamInfo(),
+      transcoding: bitrate == null
+          ? null
+          : TranscodingInfo(
+              isVideoDirect: isVideoDirect,
+              isAudioDirect: isAudioDirect,
+              bitrate: bitrate,
+              reasons: const [],
+            ),
+      isCompleted: false,
       isPaused: isPaused,
     );
   }
 
   group('CurrentActivityCard season/episode vs year display', () {
     testWidgets('shows season and episode when both are > 0', (tester) async {
-      final session = baseSession(season: 1, episode: 2, year: 2024);
+      final session = baseEntry(season: 1, episode: 2, year: 2024);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
@@ -60,7 +81,7 @@ void main() {
     });
 
     testWidgets('shows year when no season/episode but year is set', (tester) async {
-      final session = baseSession(season: 0, episode: 0, year: 2024);
+      final session = baseEntry(season: 0, episode: 0, year: 2024);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
@@ -69,7 +90,7 @@ void main() {
     });
 
     testWidgets('shows neither season/episode nor year when not provided', (tester) async {
-      final session = baseSession(season: 0, episode: 0, year: null);
+      final session = baseEntry(season: 0, episode: 0, year: null);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
@@ -78,9 +99,37 @@ void main() {
     });
   });
 
+  group('CurrentActivityCard title display', () {
+    testWidgets('prefers seriesName over title when present', (tester) async {
+      final entry = baseEntry(
+        seriesName: 'Series Title',
+        title: 'Episode Title',
+        season: 1,
+        episode: 1,
+      );
+
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: entry)));
+
+      expect(find.text('Series Title'), findsOneWidget);
+      expect(find.text('Episode Title'), findsNothing);
+    });
+
+    testWidgets('falls back to title when seriesName is null', (tester) async {
+      final entry = baseEntry(
+        seriesName: null,
+        title: 'Movie Title',
+        year: 2024,
+      );
+
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: entry)));
+
+      expect(find.text('Movie Title'), findsOneWidget);
+    });
+  });
+
   group('CurrentActivityCard remaining time display', () {
     testWidgets('shows correct minutes left for normal progress', (tester) async {
-      final session = baseSession(
+      final session = baseEntry(
         progress: const Duration(minutes: 3),
         duration: const Duration(minutes: 10),
       );
@@ -92,7 +141,7 @@ void main() {
 
     testWidgets('clamps remaining minutes to zero when progress exceeds duration',
         (tester) async {
-      final session = baseSession(
+      final session = baseEntry(
         progress: const Duration(minutes: 15),
         duration: const Duration(minutes: 10),
       );
@@ -106,7 +155,7 @@ void main() {
   group('CurrentActivityCard bitrate display', () {
     testWidgets('does not show bitrate when value is null or non-positive',
         (tester) async {
-      final session = baseSession(bitrate: 0);
+      final session = baseEntry(bitrate: 0);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
@@ -117,22 +166,29 @@ void main() {
 
     testWidgets('shows formatted Mbps bitrate when high value is provided',
         (tester) async {
-      final session = baseSession(bitrate: 2500000);
+      final session = baseEntry(bitrate: 2500000);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
       expect(find.text('2.5Mbps'), findsOneWidget);
     });
+
+    testWidgets('shows formatted kbps bitrate for 1000 bps', (tester) async {
+      final session = baseEntry(bitrate: 1000);
+
+      await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
+
+      expect(find.text('1kbps'), findsOneWidget);
+    });
   });
 
   group('CurrentActivityCard transcoding badges', () {
     testWidgets('shows V and A when video and audio are transcoding', (tester) async {
-      final transcodingInfo = TranscodingInfo(
-        video: SessionVideo(isDirectStream: false),
-        audio: SessionAudio(isDirectStream: false),
-        reasons: const [],
+      final session = baseEntry(
+        bitrate: 1000,
+        isVideoDirect: false,
+        isAudioDirect: false,
       );
-      final session = baseSession(transcodingInfo: transcodingInfo);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
@@ -141,12 +197,11 @@ void main() {
     });
 
     testWidgets('hides badges when both streams are direct', (tester) async {
-      final transcodingInfo = TranscodingInfo(
-        video: SessionVideo(isDirectStream: true),
-        audio: SessionAudio(isDirectStream: true),
-        reasons: const [],
+      final session = baseEntry(
+        bitrate: 1000,
+        isVideoDirect: true,
+        isAudioDirect: true,
       );
-      final session = baseSession(transcodingInfo: transcodingInfo);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
@@ -157,15 +212,10 @@ void main() {
 
   group('CurrentActivityCard avatars and poster fallback', () {
     testWidgets('uses user initial when no user image URL', (tester) async {
-      final transcodingInfo = TranscodingInfo(
-        video: SessionVideo(isDirectStream: true),
-        audio: SessionAudio(isDirectStream: true),
-        reasons: const [],
-      );
-      final session = baseSession(
+      final session = baseEntry(
         userName: 'Alice',
         userImageUrl: null,
-        transcodingInfo: transcodingInfo,
+        bitrate: 1000,
       );
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
@@ -174,7 +224,7 @@ void main() {
     });
 
     testWidgets('uses PosterFallback when no imageUrl', (tester) async {
-      final session = baseSession(imageUrl: '');
+      final session = baseEntry(imageUrl: null);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
@@ -190,7 +240,7 @@ void main() {
   group('CurrentActivityCard paused overlay', () {
     testWidgets('shows pause icon overlay when session is paused',
         (tester) async {
-      final session = baseSession(isPaused: true);
+      final session = baseEntry(isPaused: true);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 
@@ -199,7 +249,7 @@ void main() {
 
     testWidgets('does not show pause icon overlay when session is not paused',
         (tester) async {
-      final session = baseSession(isPaused: false);
+      final session = baseEntry(isPaused: false);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
 

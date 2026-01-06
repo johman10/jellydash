@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/screens/dashboard_screen.dart';
 import 'package:jellydash/services/jellyfin_api_service.dart';
-import 'package:jellydash/types/session.dart';
+import 'package:jellydash/types/playback_entry.dart';
 import 'package:jellydash/widgets/now_playing.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -33,38 +33,59 @@ void main() {
     );
   }
 
-  Session baseSession({
-    String? name,
+  int ticksFromDuration(Duration duration) => duration.inMicroseconds * 10;
+
+  PlaybackEntry baseEntry({
+    String? title,
+    String? seriesName,
     int? season,
     int? episode,
     int? year,
     Duration? progress,
     Duration? duration,
     int? bitrate,
-    TranscodingInfo? transcodingInfo,
+    bool isVideoDirect = true,
+    bool isAudioDirect = true,
     String? userName,
     String? userImageUrl,
     String? imageUrl,
     bool isPaused = false,
   }) {
-    return Session(
-      userName: userName ?? 'User',
-      client: 'Web',
-      deviceName: 'Device',
-      name: name ?? 'Title',
-      season: season,
-      episode: episode,
-      year: year,
-      imageUrl: imageUrl ?? '',
-      video: SessionVideo(),
-      audio: SessionAudio(),
-      subtitles: SessionSubtitle(),
-      transcodingInfo: transcodingInfo ??
-          TranscodingInfo(video: SessionVideo(), audio: SessionAudio(), reasons: []),
-      progress: progress ?? const Duration(minutes: 1),
-      duration: duration ?? const Duration(minutes: 10),
-      bitrate: bitrate,
-      userImageUrl: userImageUrl,
+    final effectiveDuration = duration ?? const Duration(minutes: 10);
+    final effectiveProgress = progress ?? const Duration(minutes: 1);
+
+    return PlaybackEntry(
+      itemId: 'item1',
+      parentItemId: null,
+      contentKind: ContentKind.other,
+      identity: ContentIdentity(
+        primaryImageUrl: imageUrl,
+        title: title ?? 'Title',
+        seriesName: seriesName,
+        seasonNumber: season,
+        episodeNumber: episode,
+        year: year,
+      ),
+      user: UserInfo(
+        userId: 'user1',
+        userName: userName ?? 'User',
+        userImageUrl: userImageUrl,
+      ),
+      client: const ClientInfo(deviceName: 'Device', clientName: 'Web'),
+      timing: TimingInfo(
+        runtimeTicks: ticksFromDuration(effectiveDuration),
+        endPositionTicks: ticksFromDuration(effectiveProgress),
+      ),
+      streams: const StreamInfo(),
+      transcoding: bitrate == null
+          ? null
+          : TranscodingInfo(
+              isVideoDirect: isVideoDirect,
+              isAudioDirect: isAudioDirect,
+              bitrate: bitrate,
+              reasons: const [],
+            ),
+      isCompleted: false,
       isPaused: isPaused,
     );
   }
@@ -82,9 +103,9 @@ void main() {
 
     testWidgets('renders without error', (tester) async {
       when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseSession(
+            baseEntry(
               userName: 'TestUser',
-              name: 'Test Series',
+              seriesName: 'Test Series',
               season: 1,
               episode: 2,
               year: 2022,
@@ -101,9 +122,9 @@ void main() {
 
     testWidgets('shows loading indicator and activities', (tester) async {
       when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseSession(
+            baseEntry(
               userName: 'TestUser',
-              name: 'Test Series',
+              seriesName: 'Test Series',
               season: 1,
               episode: 2,
               year: 2022,
@@ -124,9 +145,9 @@ void main() {
       const pollingInterval = 1;
 
       when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseSession(
+            baseEntry(
               userName: 'User1',
-              name: 'Show1',
+              seriesName: 'Show1',
               season: 1,
               episode: 1,
               progress: const Duration(minutes: 1),
@@ -145,9 +166,9 @@ void main() {
       expect(find.textContaining('User1'), findsOneWidget);
 
       when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseSession(
+            baseEntry(
               userName: 'User2',
-              name: 'Show2',
+              seriesName: 'Show2',
               season: 2,
               episode: 2,
               progress: const Duration(minutes: 9),
@@ -164,9 +185,9 @@ void main() {
 
     testWidgets('shows RecentActivities', (tester) async {
       when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseSession(
+            baseEntry(
               userName: 'TestUser',
-              name: 'Test Series',
+              seriesName: 'Test Series',
               season: 1,
               episode: 2,
               year: 2022,
@@ -183,9 +204,9 @@ void main() {
 
     testWidgets('shows CurrentActivities with mock session', (tester) async {
       when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseSession(
+            baseEntry(
               userName: 'TestUser',
-              name: 'Test Series',
+              seriesName: 'Test Series',
               season: 1,
               episode: 2,
               year: 2022,
@@ -213,17 +234,17 @@ void main() {
 
     testWidgets('shows multiple sessions', (tester) async {
       when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseSession(
+            baseEntry(
               userName: 'User1',
-              name: 'Show1',
+              seriesName: 'Show1',
               season: 1,
               episode: 1,
               progress: const Duration(minutes: 1),
               duration: const Duration(minutes: 10),
             ),
-            baseSession(
+            baseEntry(
               userName: 'User2',
-              name: 'Show2',
+              seriesName: 'Show2',
               season: 2,
               episode: 2,
               progress: const Duration(minutes: 9),
