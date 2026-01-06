@@ -6,7 +6,7 @@
 import 'dart:async' as _i4;
 
 import 'package:jellydash/services/jellyfin_api_service.dart' as _i2;
-import 'package:jellydash/types/session.dart' as _i5;
+import 'package:jellydash/types/playback_entry.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i3;
 
@@ -53,11 +53,12 @@ class MockJellyfinApiService extends _i1.Mock
       ) as String);
 
   @override
-  _i4.Future<List<_i5.Session>> fetchNowPlaying() => (super.noSuchMethod(
+  _i4.Future<List<_i5.PlaybackEntry>> fetchNowPlaying() => (super.noSuchMethod(
         Invocation.method(
           #fetchNowPlaying,
           [],
         ),
-        returnValue: _i4.Future<List<_i5.Session>>.value(<_i5.Session>[]),
-      ) as _i4.Future<List<_i5.Session>>);
+        returnValue: _i4.Future<List<_i5.PlaybackEntry>>.value(
+            <_i5.PlaybackEntry>[]),
+      ) as _i4.Future<List<_i5.PlaybackEntry>>);
 }
