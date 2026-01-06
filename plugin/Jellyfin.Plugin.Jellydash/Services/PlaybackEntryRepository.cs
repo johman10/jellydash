@@ -24,12 +24,38 @@ public sealed class PlaybackEntryRepository(DatabaseHelper databaseHelper)
     /// <summary>
     /// Retrieves a page of playback entries ordered from most recent to oldest.
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A tuple containing the entries and paging state.</returns>
+    public async Task<IReadOnlyList<PlaybackEntry>> GetNowPlayingAsync(
+          CancellationToken cancellationToken)
+    {
+        await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
+            // Create a query that retrieves all playback entries, ordered by EndUtc DESC, Id DESC for paging
+            var sql = $@"
+                    SELECT *
+                    FROM PlaybackEntries
+                    WHERE IsCompleted = 0
+                    ORDER BY StartUtc DESC, Id DESC;";
+            return (await connection.QueryAsync<PlaybackEntry>(sql).ConfigureAwait(false)).AsList();
+        }
+        finally
+        {
+            DbLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Retrieves a page of playback entries ordered from most recent to oldest.
+    /// </summary>
     /// <param name="limit">Maximum number of entries to return.</param>
     /// <param name="beforeId">Optional id of the last entry from the previous page.</param>
     /// <param name="beforeEndUtc">Optional end time of the last entry from the previous page.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A tuple containing the entries and paging state.</returns>
-    public async Task<(IReadOnlyList<PlaybackEntry> Entries, int? LastId, DateTime? LastEndUtc)> GetPageAsync(
+    public async Task<(IReadOnlyList<PlaybackEntry> Entries, int? LastId, DateTime? LastEndUtc)> GetHistoryPageAsync(
           int limit,
           int? beforeId,
           DateTime? beforeEndUtc,

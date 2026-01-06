@@ -27,7 +27,7 @@ public class ContentIdentityDto(ContentKind contentKind, Guid itemId, Guid? pare
     }
 
     /// <summary>
-    /// Gets the primary display title (series or movie name).
+    /// Gets the primary display title (episode or movie name).
     /// </summary>
     public string Title { get; init; } = string.Empty;
 

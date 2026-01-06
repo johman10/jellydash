@@ -31,7 +31,7 @@ public sealed class JellydashControllerTests
         var repo = await CreateRepositoryAsync();
         var controller = new JellydashController(repo);
 
-        var result = await controller.GetActivity(null, "not-a-valid-cursor", CancellationToken.None);
+        var result = await controller.GetHistory(null, "not-a-valid-cursor", CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Invalid cursor.", badRequest.Value);
@@ -68,11 +68,11 @@ public sealed class JellydashControllerTests
 
         var controller = new JellydashController(repo);
 
-        var result = await controller.GetActivity(null, null, CancellationToken.None);
+        var result = await controller.GetHistory(null, null, CancellationToken.None);
 
-        var ok = Assert.IsType<OkObjectResult>(result);
-        var items = GetItems(ok);
-        var nextCursor = GetNextCursor(ok);
+        var json = Assert.IsType<JsonResult>(result);
+        var items = GetItems(json);
+        var nextCursor = GetNextCursor(json);
 
         Assert.Equal(20, items.Count);
         var orderedByEnd = items.OrderByDescending(e => e.Timing.EndUtc).ToList();
@@ -111,19 +111,19 @@ public sealed class JellydashControllerTests
         var controller = new JellydashController(repo);
 
         // First page with explicit small limit.
-        var firstResult = await controller.GetActivity(2, null, CancellationToken.None);
-        var firstOk = Assert.IsType<OkObjectResult>(firstResult);
-        var firstItems = GetItems(firstOk);
-        var firstCursor = GetNextCursor(firstOk);
+        var firstResult = await controller.GetHistory(2, null, CancellationToken.None);
+        var firstJson = Assert.IsType<JsonResult>(firstResult);
+        var firstItems = GetItems(firstJson);
+        var firstCursor = GetNextCursor(firstJson);
 
         Assert.Equal(2, firstItems.Count);
         Assert.NotNull(firstCursor);
 
         // Second page using cursor.
-        var secondResult = await controller.GetActivity(2, firstCursor, CancellationToken.None);
-        var secondOk = Assert.IsType<OkObjectResult>(secondResult);
-        var secondItems = GetItems(secondOk);
-        var secondCursor = GetNextCursor(secondOk);
+        var secondResult = await controller.GetHistory(2, firstCursor, CancellationToken.None);
+        var secondJson = Assert.IsType<JsonResult>(secondResult);
+        var secondItems = GetItems(secondJson);
+        var secondCursor = GetNextCursor(secondJson);
 
         Assert.Equal(2, secondItems.Count);
         Assert.NotNull(secondCursor);
@@ -138,21 +138,17 @@ public sealed class JellydashControllerTests
         Assert.False(string.IsNullOrEmpty(secondCursor));
     }
 
-    private static List<PlaybackEntryDto> GetItems(OkObjectResult ok)
+    private static List<PlaybackEntryDto> GetItems(JsonResult json)
     {
-        var value = ok.Value ?? throw new InvalidOperationException("Result value is null.");
-        var itemsProperty = value.GetType().GetProperty("items");
-        Assert.NotNull(itemsProperty);
-        var itemsObj = itemsProperty!.GetValue(value);
-        var itemsEnumerable = Assert.IsAssignableFrom<IEnumerable<PlaybackEntryDto>>(itemsObj);
-        return itemsEnumerable.ToList();
+        var value = json.Value ?? throw new InvalidOperationException("Result value is null.");
+        var response = Assert.IsType<HistoryResponse>(value);
+        return response.Items.ToList();
     }
 
-    private static string? GetNextCursor(OkObjectResult ok)
+    private static string? GetNextCursor(JsonResult json)
     {
-        var value = ok.Value ?? throw new InvalidOperationException("Result value is null.");
-        var cursorProperty = value.GetType().GetProperty("nextCursor");
-        Assert.NotNull(cursorProperty);
-        return (string?)cursorProperty!.GetValue(value);
+        var value = json.Value ?? throw new InvalidOperationException("Result value is null.");
+        var response = Assert.IsType<HistoryResponse>(value);
+        return response.NextCursor;
     }
 }

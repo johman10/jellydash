@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Jellyfin.Data.Enums;
+using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
@@ -85,6 +86,11 @@ public class PlaybackEntry
     /// Gets or sets the user name for display.
     /// </summary>
     public string UserName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the primary image tag for the user, used to retrieve the user's profile image.
+    /// </summary>
+    public string? UserPrimaryImageTag { get; set; }
 
     // Client
 
@@ -350,18 +356,49 @@ public class PlaybackEntry
         entry.IsCompleted = true;
         entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsPaused = false;
-        entry.EndUtc = DateTime.UtcNow;
+        entry.EndUtc = eventArgs.Session.LastPlaybackCheckIn;
         return entry;
     }
 
     /// <summary>
-    /// Generates a unique playback identifier based on the session and media information from the provided <see cref="PlaybackProgressEventArgs"/>.
+    /// Updates an existing <see cref="PlaybackEntry"/> to represent the end of a session based on a Jellyfin <see cref="SessionEndedEventArgs"/>.
     /// </summary>
-    /// <param name="eventArgs">The playback progress event arguments containing session and media info.</param>
-    /// <returns>A string representing the generated playback identifier.</returns>
-    public static Guid GeneratePlaybackId(PlaybackProgressEventArgs eventArgs)
+    /// <param name="existing">The existing <see cref="PlaybackEntry"/> to update.</param>
+    /// <param name="eventArgs">The session ended event containing the final playback state and timestamp.</param>
+    /// <returns>
+    /// The updated <see cref="PlaybackEntry"/> marked as completed and with the final playback position and end time.
+    /// </returns>
+    public static PlaybackEntry FromSessionEndedEvent(PlaybackEntry existing, SessionEndedEventArgs eventArgs)
     {
-        var byt = Encoding.UTF8.GetBytes($"{eventArgs.Session.Id}-{eventArgs.Session.PlaylistItemId}-{eventArgs.MediaInfo.Id}");
+        var entry = existing;
+        entry.EndPositionTicks = eventArgs.Argument.PlayState?.PositionTicks ?? existing.EndPositionTicks;
+        entry.IsPaused = false;
+        entry.IsCompleted = true;
+        entry.EndUtc = eventArgs.Argument.LastPlaybackCheckIn;
+
+        // Clear transcoding info as playback has ended. This matches the behavior in FromStopEvent.
+        entry.IsAudioDirect = true;
+        entry.IsVideoDirect = true;
+        entry.TranscodeBitrate = null;
+        entry.HardwareAcceleration = null;
+        entry.TranscodedVideoCodec = null;
+        entry.TranscodedVideoContainer = null;
+        entry.TranscodedAudioCodec = null;
+        entry.TranscodeReasonsJson = null;
+        entry.TranscodeCompletionPercentage = null;
+        return entry;
+    }
+
+    /// <summary>
+    /// Generates a unique playback identifier based on the session and media information.
+    /// </summary>
+    /// <param name="sessionId">The Jellyfin session id.</param>
+    /// <param name="playlistItemId">The Jellyfin playlist item id.</param>
+    /// <param name="itemId">The Jellyfin media item id.</param>
+    /// <returns>A GUID representing the generated playback identifier.</returns>
+    public static Guid GeneratePlaybackId(string? sessionId, string? playlistItemId, Guid itemId)
+    {
+        var byt = Encoding.UTF8.GetBytes($"{sessionId}-{playlistItemId}-{itemId}");
 #pragma warning disable CA5351
         var hash = MD5.HashData(byt);
 #pragma warning restore CA5351
@@ -394,7 +431,7 @@ public class PlaybackEntry
 
         return new PlaybackEntry
         {
-            PlaybackId = GeneratePlaybackId(eventArgs),
+            PlaybackId = GeneratePlaybackId(eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id),
             ItemId = eventArgs.MediaInfo.Id,
             ParentItemId = eventArgs.MediaInfo.ParentId,
             ContentKind = contentKind,
@@ -406,6 +443,7 @@ public class PlaybackEntry
             EpisodeNumber = eventArgs.MediaInfo.IndexNumber,
             UserId = eventArgs.Users[0].Id,
             UserName = eventArgs.Users[0].Username,
+            UserPrimaryImageTag = eventArgs.Session?.UserPrimaryImageTag,
             ClientName = eventArgs.ClientName,
             DeviceName = eventArgs.DeviceName,
             DeviceId = eventArgs.DeviceId,
@@ -436,181 +474,5 @@ public class PlaybackEntry
             TranscodeReasonsJson = System.Text.Json.JsonSerializer.Serialize(eventArgs.Session?.TranscodingInfo?.TranscodeReasons),
             TranscodeCompletionPercentage = eventArgs.Session?.TranscodingInfo?.CompletionPercentage
         };
-    }
-
-    /// <summary>
-    /// Converts this stored playback entry into an API-facing <see cref="PlaybackEntryDto"/>.
-    /// </summary>
-    /// <returns>A new <see cref="PlaybackEntryDto"/> instance populated from this entry.</returns>
-    public PlaybackEntryDto ToDto()
-    {
-        var identity = new ContentIdentityDto(contentKind: ContentKind, itemId: ItemId, parentItemId: ParentItemId)
-        {
-            Title = Title,
-            Genres = Genres,
-            Year = Year,
-            SeriesName = SeriesName,
-            SeasonNumber = SeasonNumber,
-            EpisodeNumber = EpisodeNumber
-        };
-
-        var user = new UserInfoDto
-        {
-            UserId = UserId,
-            UserName = UserName,
-        };
-
-        var client = new ClientInfoDto
-        {
-            ClientName = ClientName,
-            DeviceName = DeviceName,
-            DeviceId = DeviceId
-        };
-
-        var timing = new TimingInfoDto
-        {
-            StartUtc = StartUtc,
-            EndUtc = EndUtc,
-            RuntimeTicks = RuntimeTicks,
-            StartPositionTicks = StartPositionTicks,
-            EndPositionTicks = EndPositionTicks,
-        };
-
-        VideoTrackDto? video = null;
-        if (VideoCodec is not null
-            || VideoContainer is not null
-            || VideoRange is not null
-            || VideoBitrate.HasValue
-            || VideoBitDepth.HasValue
-            || VideoHeight.HasValue
-            || VideoWidth.HasValue)
-        {
-            video = new VideoTrackDto
-            {
-                Codec = VideoCodec,
-                Container = VideoContainer,
-                VideoRange = VideoRange,
-                Bitrate = VideoBitrate,
-                BitDepth = VideoBitDepth,
-                Height = VideoHeight,
-                Width = VideoWidth
-            };
-        }
-
-        AudioTrackDto? audio = null;
-        if (AudioLanguage is not null
-            || AudioCodec is not null
-            || AudioLayout is not null
-            || AudioBitrate.HasValue
-            || AudioSampleRate.HasValue)
-        {
-            audio = new AudioTrackDto
-            {
-                Language = AudioLanguage,
-                Codec = AudioCodec,
-                Layout = AudioLayout,
-                Bitrate = AudioBitrate,
-                SampleRate = AudioSampleRate
-            };
-        }
-
-        SubtitleTrackDto? subtitle = null;
-        if (SubtitleIsForced.HasValue
-            || SubtitleIsHearingImpaired.HasValue
-            || SubtitleCodec is not null
-            || SubtitleLanguage is not null)
-        {
-            subtitle = new SubtitleTrackDto
-            {
-                IsForced = SubtitleIsForced ?? false,
-                IsHearingImpaired = SubtitleIsHearingImpaired ?? false,
-                Codec = SubtitleCodec,
-                Language = SubtitleLanguage
-            };
-        }
-
-        var streams = new StreamInfoDto
-        {
-            Video = video,
-            Audio = audio,
-            Subtitle = subtitle
-        };
-
-        TranscodingInfoDto? transcoding = null;
-        if (!IsVideoDirect
-            || !IsAudioDirect
-            || HardwareAcceleration is not null
-            || TranscodeBitrate.HasValue
-            || TranscodedVideoCodec is not null
-            || TranscodedVideoContainer is not null
-            || TranscodedAudioCodec is not null
-            || !string.IsNullOrEmpty(TranscodeReasonsJson)
-            || TranscodeCompletionPercentage.HasValue)
-        {
-            IReadOnlyList<string> reasons;
-            if (string.IsNullOrWhiteSpace(TranscodeReasonsJson))
-            {
-                reasons = Array.Empty<string>();
-            }
-            else
-            {
-                // The JSON is stored as a simple string array; parse conservatively.
-                try
-                {
-                    reasons = System.Text.Json.JsonSerializer.Deserialize<IReadOnlyList<string>>(TranscodeReasonsJson!)
-                              ?? Array.Empty<string>();
-                }
-                catch
-                {
-                    reasons = Array.Empty<string>();
-                }
-            }
-
-            VideoTrackDto? transcodedVideo = null;
-            if (TranscodedVideoContainer is not null || TranscodedVideoCodec is not null || TranscodeBitrate.HasValue)
-            {
-                transcodedVideo = new VideoTrackDto
-                {
-                    Container = TranscodedVideoContainer,
-                    Codec = TranscodedVideoCodec,
-                    Bitrate = TranscodeBitrate
-                };
-            }
-
-            AudioTrackDto? transcodedAudio = null;
-            if (TranscodedAudioCodec is not null)
-            {
-                transcodedAudio = new AudioTrackDto
-                {
-                    Codec = TranscodedAudioCodec,
-                    Bitrate = TranscodeBitrate
-                };
-            }
-
-            transcoding = new TranscodingInfoDto
-            {
-                IsVideoDirect = IsVideoDirect,
-                IsAudioDirect = IsAudioDirect,
-                HardwareAcceleration = HardwareAcceleration,
-                Bitrate = TranscodeBitrate,
-                TranscodedVideo = transcodedVideo,
-                TranscodedAudio = transcodedAudio,
-                Reasons = reasons,
-                CompletionPercentage = TranscodeCompletionPercentage
-            };
-        }
-
-        return new PlaybackEntryDto(
-            itemId: ItemId,
-            parentItemId: ParentItemId,
-            contentKind: ContentKind,
-            identity: identity,
-            user: user,
-            client: client,
-            timing: timing,
-            streams: streams,
-            transcoding: transcoding,
-            isCompleted: IsCompleted,
-            isPaused: IsPaused);
     }
 }

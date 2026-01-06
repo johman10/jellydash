@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
-import '../types/session.dart';
-import './current_activity_card.dart';
+import 'package:jellydash/types/playback_entry.dart';
+import 'package:jellydash/widgets/error_card.dart';
+import 'playback_entry_card.dart';
 
-class CurrentActivities extends StatelessWidget {
+class NowPlaying extends StatelessWidget {
   final bool isLoading;
-  final List<Session> sessions;
+  final List<PlaybackEntry> nowPlayingEntries;
+  final Exception? error;
 
-  const CurrentActivities(
-      {super.key, required this.isLoading, required this.sessions});
+  const NowPlaying(
+      {super.key, required this.isLoading, required this.nowPlayingEntries, this.error});
 
-  Widget getContent(bool isLoading, List<Session> sessions) {
+  Widget getContent(bool isLoading, List<PlaybackEntry> nowPlayingEntries) {
     if (isLoading) {
       return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Padding(
@@ -21,7 +23,11 @@ class CurrentActivities extends StatelessWidget {
       ]);
     }
 
-    if (sessions.isEmpty) {
+    if (error != null) {
+      return ErrorCard(error: error!);
+    }
+
+    if (nowPlayingEntries.isEmpty) {
       return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Padding(
           padding: EdgeInsets.all(24),
@@ -58,10 +64,10 @@ class CurrentActivities extends StatelessWidget {
         return Wrap(
           spacing: spacing, // space between columns only
           // runSpacing: spacing,
-          children: sessions.map((session) {
+          children: nowPlayingEntries.map((entry) {
             return SizedBox(
               width: cardWidth,
-              child: CurrentActivityCard(session: session),
+              child: PlaybackEntryCard(entry: entry),
             );
           }).toList(),
         );
@@ -81,7 +87,7 @@ class CurrentActivities extends StatelessWidget {
             'Now Playing',
             style: JellydashTextStyles.sectionTitle,
           ),
-          getContent(isLoading, sessions),
+          getContent(isLoading, nowPlayingEntries),
         ],
       ),
     );

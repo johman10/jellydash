@@ -16,16 +16,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _baseUrlController;
   late final TextEditingController _apiKeyController;
   final _formKey = GlobalKey<FormState>();
+  late bool _usePluginApi;
 
   @override
   void initState() {
     super.initState();
     _baseUrlController =
-        TextEditingController(text: widget.appSettings.jellyfinBaseUrl);
+      TextEditingController(text: widget.appSettings.jellyfinBaseUrl);
     _apiKeyController =
-        TextEditingController(text: widget.appSettings.jellyfinApiKey);
+      TextEditingController(text: widget.appSettings.jellyfinApiKey);
     _pollingIntervalController = TextEditingController(
-        text: widget.appSettings.pollingInterval.toString());
+      text: widget.appSettings.pollingInterval.toString());
+    _usePluginApi = widget.appSettings.usePluginApi;
   }
 
   @override
@@ -37,19 +39,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _saveSettings(
-      String baseUrl, String apiKey, int pollingInterval) async {
+      String baseUrl, String apiKey, int pollingInterval, bool usePluginApi) async {
     final service = AppSettingsService();
     await service.saveJellyfinBaseUrl(baseUrl);
     await service.saveJellyfinApiKey(apiKey);
     await service.savePollingInterval(pollingInterval);
+    await service.saveUsePluginApi(usePluginApi);
   }
 
   Future<void> handleSavePressed() async {
     var scaffoldMessenger = ScaffoldMessenger.of(context);
     if (_formKey.currentState!.validate()) {
-      await _saveSettings(_baseUrlController.text, _apiKeyController.text,
-          int.parse(_pollingIntervalController.text));
-
+      await _saveSettings(
+        _baseUrlController.text,
+        _apiKeyController.text,
+        int.parse(_pollingIntervalController.text),
+        _usePluginApi,
+      );
       scaffoldMessenger.showSnackBar(
         const SnackBar(content: Text('Settings saved')),
       );
@@ -115,6 +121,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         return 'Please enter a valid positive integer';
                       }
                       return null;
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Use Jellydash Plugin API'),
+                    subtitle: const Text('Use the Jellydash plugin endpoints for activity and history. This requires the plugin to be installed on your Jellyfin instance, but offers more features.'),
+                    contentPadding: EdgeInsets.zero,
+                    value: _usePluginApi,
+                    onChanged: (val) {
+                      setState(() {
+                        _usePluginApi = val;
+                      });
                     },
                   ),
                   Align(

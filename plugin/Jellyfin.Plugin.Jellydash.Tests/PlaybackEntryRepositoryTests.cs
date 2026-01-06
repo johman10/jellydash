@@ -32,11 +32,11 @@ public class PlaybackEntryRepositoryTests
         await repository.AppendAsync(older, cancellationToken);
         await repository.AppendAsync(newer, cancellationToken);
 
-        var (firstPage, lastId, lastEndUtc) = await repository.GetPageAsync(1, null, null, cancellationToken);
+        var (firstPage, lastId, lastEndUtc) = await repository.GetHistoryPageAsync(1, null, null, cancellationToken);
         Assert.Single(firstPage);
         Assert.Equal(newer.EndUtc, firstPage[0].EndUtc);
 
-        var (secondPage, _, _) = await repository.GetPageAsync(10, lastId, lastEndUtc, cancellationToken);
+        var (secondPage, _, _) = await repository.GetHistoryPageAsync(10, lastId, lastEndUtc, cancellationToken);
         Assert.Single(secondPage);
         Assert.Equal(older.EndUtc, secondPage[0].EndUtc);
     }

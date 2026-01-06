@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jellydash/screens/dashboard_screen.dart';
-import 'package:jellydash/services/jellyfin_api_service.dart';
+import 'package:jellydash/services/api_service_factory.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
 import 'screens/settings_screen.dart';
 import 'services/app_settings_service.dart';
@@ -50,9 +50,10 @@ class JellydashApp extends StatelessWidget {
           builder: (BuildContext context, GoRouterState state) {
             final appSettings = SettingsHolder.of(context);
             return DashboardScreen(
-              apiService: JellyfinApiService(
+              apiService: ApiServiceFactory.create(
                 baseUrl: appSettings.jellyfinBaseUrl,
                 apiKey: appSettings.jellyfinApiKey,
+                usePluginApi: appSettings.usePluginApi,
               ),
               pollingInterval: appSettings.pollingInterval,
             );
