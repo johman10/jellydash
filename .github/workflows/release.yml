@@ -1,0 +1,140 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release-plugin:
+    name: Build and Release Plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Update csproj version
+        working-directory: plugin/Jellyfin.Plugin.Jellydash
+        run: |
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          sed -i "/<PropertyGroup>/a\    <AssemblyVersion>$VERSION</AssemblyVersion>\n    <FileVersion>$VERSION</FileVersion>\n    <Version>$VERSION</Version>" Jellyfin.Plugin.Jellydash.csproj
+
+      - name: Restore .NET dependencies
+        working-directory: plugin
+        run: dotnet restore Jellyfin.Plugin.Jellydash.sln
+
+      - name: Build .NET projects
+        working-directory: plugin
+        run: dotnet build Jellyfin.Plugin.Jellydash.sln --configuration Release --no-restore
+
+      - name: Publish plugin
+        working-directory: plugin/Jellyfin.Plugin.Jellydash
+        run: dotnet publish --configuration Release --output ./publish
+
+      - name: Create plugin ZIP
+        working-directory: plugin/Jellyfin.Plugin.Jellydash/publish
+        run: |
+          zip -r ../../../jellydash-${{ steps.get_version.outputs.VERSION }}.zip .
+
+      - name: Calculate checksum
+        id: checksum
+        run: |
+          CHECKSUM=$(md5sum jellydash-${{ steps.get_version.outputs.VERSION }}.zip | cut -d ' ' -f 1)
+          echo "CHECKSUM=$CHECKSUM" >> $GITHUB_OUTPUT
+          echo "Checksum: $CHECKSUM"
+
+      - name: Generate release notes
+        id: release_notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: context.ref.replace('refs/tags/', ''),
+            });
+            return data.body;
+          result-encoding: string
+
+      - name: Update manifest.json
+        run: |
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          CHECKSUM=${{ steps.checksum.outputs.CHECKSUM }}
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S")
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/jellydash-${VERSION}.zip"
+
+          # Get the target ABI from Jellyfin.Controller package version in csproj
+          TARGET_ABI=$(grep -oP 'Jellyfin.Controller" Version="\K[^"]+' plugin/Jellyfin.Plugin.Jellydash/Jellyfin.Plugin.Jellydash.csproj)
+
+          # Update manifest.json
+          python3 << 'EOF'
+          import json
+          import os
+
+          manifest_path = 'plugin/manifest.json'
+
+          with open(manifest_path, 'r') as f:
+              manifest = json.load(f)
+
+          version = os.environ['VERSION']
+          checksum = os.environ['CHECKSUM']
+          timestamp = os.environ['TIMESTAMP']
+          download_url = os.environ['DOWNLOAD_URL']
+          target_abi = os.environ['TARGET_ABI']
+          changelog = os.environ['CHANGELOG']
+
+          # Add new version to the beginning of versions array
+          new_version = {
+              "version": version,
+              "changelog": changelog,
+              "targetAbi": target_abi,
+              "sourceUrl": download_url,
+              "checksum": checksum,
+              "timestamp": timestamp
+          }
+
+          manifest[0]['versions'].insert(0, new_version)
+
+          with open(manifest_path, 'w') as f:
+              json.dump(manifest, f, indent=2)
+          EOF
+        env:
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+          CHECKSUM: ${{ steps.checksum.outputs.CHECKSUM }}
+          CHANGELOG: ${{ steps.release_notes.outputs.result }}
+
+      - name: Commit updated manifest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add plugin/manifest.json
+          git commit -m "Update manifest.json for v${{ steps.get_version.outputs.VERSION }}"
+          git push origin HEAD:main
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: jellydash-${{ steps.get_version.outputs.VERSION }}.zip
+          body: ${{ steps.release_notes.outputs.result }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
