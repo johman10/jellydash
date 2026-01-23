@@ -6,7 +6,7 @@ namespace Jellyfin.Plugin.Jellydash.Models;
 /// <summary>
 /// Represents a unified view of a playback span used by Jellydash.
 /// </summary>
-public class PlaybackEntryDto(Guid itemId, Guid? parentItemId, ContentKind contentKind, ContentIdentityDto identity, UserInfoDto user, ClientInfoDto client, TimingInfoDto timing, StreamInfoDto streams, TranscodingInfoDto? transcoding, bool isCompleted, bool isPaused)
+public class PlaybackEntryDto(Guid itemId, Guid? parentItemId, ContentType contentType, ContentIdentityDto identity, UserInfoDto user, ClientInfoDto client, TimingInfoDto timing, StreamInfoDto streams, TranscodingInfoDto? transcoding, bool isCompleted, bool isPaused)
 {
     /// <summary>
     /// Gets the Jellyfin item identifier.
@@ -22,7 +22,7 @@ public class PlaybackEntryDto(Guid itemId, Guid? parentItemId, ContentKind conte
     /// <summary>
     /// Gets the kind of content (movie, episode, etc.).
     /// </summary>
-    public ContentKind ContentKind { get; init; } = contentKind;
+    public ContentType ContentType { get; init; } = contentType;
 
     /// <summary>
     /// Gets the identity metadata for the content.
@@ -71,7 +71,7 @@ public class PlaybackEntryDto(Guid itemId, Guid? parentItemId, ContentKind conte
     /// <returns>A new <see cref="PlaybackEntryDto"/> instance populated from this entry.</returns>
     public static PlaybackEntryDto FromPlaybackEntry(PlaybackEntry entry)
     {
-        var identity = new ContentIdentityDto(contentKind: entry.ContentKind, itemId: entry.ItemId, parentItemId: entry.ParentItemId)
+        var identity = new ContentIdentityDto(contentType: entry.ContentType, itemId: entry.ItemId, parentItemId: entry.ParentItemId)
         {
             Title = entry.Title,
             Genres = entry.Genres,
@@ -230,7 +230,7 @@ public class PlaybackEntryDto(Guid itemId, Guid? parentItemId, ContentKind conte
         return new PlaybackEntryDto(
             itemId: entry.ItemId,
             parentItemId: entry.ParentItemId,
-            contentKind: entry.ContentKind,
+            contentType: entry.ContentType,
             identity: identity,
             user: user,
             client: client,

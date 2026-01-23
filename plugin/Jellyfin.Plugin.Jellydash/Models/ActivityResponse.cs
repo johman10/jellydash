@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -7,11 +8,11 @@ namespace Jellyfin.Plugin.Jellydash.Models
   /// Represents a paginated response containing playback history entries and a cursor for the next page.
   /// </summary>
   /// <remarks>
-  /// Initializes a new instance of the <see cref="HistoryResponse"/> class.
+  /// Initializes a new instance of the <see cref="ActivityResponse"/> class.
   /// </remarks>
   /// <param name="items">The list of playback entries.</param>
   /// <param name="nextCursor">The cursor for the next page, if any.</param>
-  public class HistoryResponse(Collection<PlaybackEntryDto> items, string? nextCursor)
+  public class ActivityResponse(Collection<PlaybackEntryDto> items, string? nextCursor)
   {
     /// <summary>
     /// Gets the list of playback entries returned in this response.

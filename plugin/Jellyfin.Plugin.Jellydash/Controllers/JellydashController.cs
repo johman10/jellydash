@@ -42,36 +42,14 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
         /// <summary>
         /// Returns a page of recent playback entries using cursor-based pagination.
         /// </summary>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>A page of recent activity entries and a cursor for the next page, if any.</returns>
-        [HttpGet("now-playing")]
-        [Authorize]
-        public async Task<IActionResult> GetNowPlaying(CancellationToken cancellationToken)
-        {
-            var entries = await _activityRepository
-                .GetNowPlayingAsync(cancellationToken)
-                .ConfigureAwait(false);
-
-            var dtoItems = new List<PlaybackEntryDto>(entries.Count);
-            foreach (var entry in entries)
-            {
-                dtoItems.Add(PlaybackEntryDto.FromPlaybackEntry(entry));
-            }
-
-            // Return with snake_case serialization
-            return new JsonResult(dtoItems, JsonResultOptions);
-        }
-
-        /// <summary>
-        /// Returns a page of recent playback entries using cursor-based pagination.
-        /// </summary>
         /// <param name="limit">Maximum number of entries to return (max 100, default 20).</param>
         /// <param name="cursor">An opaque cursor returned from a previous page.</param>
+        /// <param name="includeActive">Whether to include active (not completed) entries.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A page of recent activity entries and a cursor for the next page, if any.</returns>
-        [HttpGet("history")]
+        [HttpGet("activity")]
         [Authorize]
-        public async Task<IActionResult> GetHistory([FromQuery] int? limit, [FromQuery] string? cursor, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetActivity([FromQuery] int? limit, [FromQuery] string? cursor, [FromQuery] bool includeActive, CancellationToken cancellationToken)
         {
             var pageSize = limit.HasValue && limit.Value > 0 ? Math.Min(limit.Value, 100) : 20;
 
@@ -91,7 +69,7 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
             }
 
             var (entries, lastId, lastEndUtc) = await _activityRepository
-                .GetHistoryPageAsync(pageSize, beforeId, beforeEndUtc, cancellationToken)
+                .GetActivitiesAsync(pageSize, beforeId, beforeEndUtc, includeActive, cancellationToken)
                 .ConfigureAwait(false);
 
             string? nextCursor = null;
@@ -107,7 +85,7 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
             }
 
             var dtoItems = new Collection<PlaybackEntryDto>(dtoList);
-            return new JsonResult(new HistoryResponse(items: dtoItems, nextCursor: nextCursor), JsonResultOptions);
+            return new JsonResult(new ActivityResponse(items: dtoItems, nextCursor: nextCursor), JsonResultOptions);
         }
 
         private static string EncodeCursor(DateTime endUtc, long id)

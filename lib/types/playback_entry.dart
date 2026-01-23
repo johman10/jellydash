@@ -1,4 +1,19 @@
-enum ContentKind { movie, episode, other }
+enum ContentType {
+  movie('Movie'),
+  episode('Episode'),
+  other('Other');
+
+  final String sessionValue;
+
+  const ContentType(this.sessionValue);
+
+  static ContentType fromApiKind(String? kind) {
+    return values.firstWhere(
+      (ct) => ct.sessionValue == kind,
+      orElse: () => ContentType.other,
+    );
+  }
+}
 
 class ContentIdentity {
   final String? primaryImageUrl;
@@ -21,9 +36,14 @@ class ContentIdentity {
 
   factory ContentIdentity.fromJson(String baseUrl, Map<String, dynamic> json) {
     return ContentIdentity(
-      primaryImageUrl: json['primary_image_path'] != null ? '$baseUrl${json['primary_image_path']}' : null,
+      primaryImageUrl: json['primary_image_path'] != null
+          ? '$baseUrl${json['primary_image_path']}'
+          : null,
       title: json['title'],
-      genres: (json['genres'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
+      genres: (json['genres'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       year: json['year'],
       seasonNumber: json['season_number'],
       episodeNumber: json['episode_number'],
@@ -31,22 +51,29 @@ class ContentIdentity {
     );
   }
 
-  factory ContentIdentity.fromSessionJson(String baseUrl,ContentKind contentKind, Map<String, dynamic> json) {
+  factory ContentIdentity.fromSessionJson(
+      String baseUrl, ContentType contentType, Map<String, dynamic> json) {
     final nowPlayingItem = json['NowPlayingItem'] as Map<String, dynamic>?;
     final itemId = nowPlayingItem?['Id']?.toString();
     final parentItemId = nowPlayingItem?['ParentId']?.toString();
 
     String? primaryImagePath;
-    if (contentKind == ContentKind.episode && parentItemId != null && parentItemId.isNotEmpty) {
+    if (contentType == ContentType.episode &&
+        parentItemId != null &&
+        parentItemId.isNotEmpty) {
       primaryImagePath = '/Items/$parentItemId/Images/Primary';
     } else if (itemId != null && itemId.isNotEmpty) {
       primaryImagePath = '/Items/$itemId/Images/Primary';
     }
 
     return ContentIdentity(
-      primaryImageUrl: primaryImagePath != null ? '$baseUrl$primaryImagePath' : null,
+      primaryImageUrl:
+          primaryImagePath != null ? '$baseUrl$primaryImagePath' : null,
       title: nowPlayingItem?['Name'] ?? '',
-      genres: (nowPlayingItem?['Genres'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
+      genres: (nowPlayingItem?['Genres'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       year: nowPlayingItem?['ProductionYear'] as int?,
       seasonNumber: nowPlayingItem?['ParentIndexNumber'] as int?,
       episodeNumber: nowPlayingItem?['IndexNumber'] as int?,
@@ -70,16 +97,19 @@ class UserInfo {
     return UserInfo(
       userId: json['user_id'],
       userName: json['user_name'],
-      userImageUrl: json['user_image_path'] != null ? '$baseUrl${json['user_image_path']}' : null,
+      userImageUrl: json['user_image_path'] != null
+          ? '$baseUrl${json['user_image_path']}'
+          : null,
     );
   }
 
-  factory UserInfo.fromSessionJson(String baseUrl,Map<String, dynamic> json) {
+  factory UserInfo.fromSessionJson(String baseUrl, Map<String, dynamic> json) {
     final userId = json['UserId']?.toString();
     return UserInfo(
       userId: userId ?? '',
       userName: json['UserName'] ?? '',
-      userImageUrl: userId != null && (json['UserPrimaryImageTag']?.toString().isNotEmpty ?? false)
+      userImageUrl: userId != null &&
+              (json['UserPrimaryImageTag']?.toString().isNotEmpty ?? false)
           ? '$baseUrl/Users/${json['UserId']}/Images/Primary?tag=${json['UserPrimaryImageTag']}'
           : null,
     );
@@ -136,8 +166,7 @@ class TimingInfo {
   factory TimingInfo.fromJson(Map<String, dynamic> json) {
     return TimingInfo(
       startUtc: DateTime.parse(json['start_utc']),
-      endUtc:
-          json['end_utc'] != null ? DateTime.parse(json['end_utc']) : null,
+      endUtc: json['end_utc'] != null ? DateTime.parse(json['end_utc']) : null,
       runtimeTicks: json['runtime_ticks'],
       startPositionTicks: json['start_position_ticks'],
       endPositionTicks: json['end_position_ticks'],
@@ -146,8 +175,10 @@ class TimingInfo {
     );
   }
 
-  factory TimingInfo.fromSessionJson(int? runTimeTicks, Map<String, dynamic> json) {
-    final positionTicks = (json['PlayState']?['PositionTicks'] as num?)?.toInt();
+  factory TimingInfo.fromSessionJson(
+      int? runTimeTicks, Map<String, dynamic> json) {
+    final positionTicks =
+        (json['PlayState']?['PositionTicks'] as num?)?.toInt();
 
     return TimingInfo(
       startUtc: null,
@@ -156,11 +187,8 @@ class TimingInfo {
       startPositionTicks: 0,
       endPositionTicks: positionTicks,
       startPercentage: 0.0,
-      endPercentage: runTimeTicks != null &&
-              positionTicks != null
-          ? (positionTicks.toDouble() /
-              runTimeTicks.toDouble() *
-              100)
+      endPercentage: runTimeTicks != null && positionTicks != null
+          ? (positionTicks.toDouble() / runTimeTicks.toDouble() * 100)
           : null,
     );
   }
@@ -313,12 +341,8 @@ class StreamInfo {
 
   factory StreamInfo.fromJson(Map<String, dynamic> json) {
     return StreamInfo(
-      video: json['video'] != null
-          ? VideoTrack.fromJson(json['video'])
-          : null,
-      audio: json['audio'] != null
-          ? AudioTrack.fromJson(json['audio'])
-          : null,
+      video: json['video'] != null ? VideoTrack.fromJson(json['video']) : null,
+      audio: json['audio'] != null ? AudioTrack.fromJson(json['audio']) : null,
       subtitle: json['subtitle'] != null
           ? SubtitleTrack.fromJson(json['subtitle'])
           : null,
@@ -377,16 +401,15 @@ class TranscodingInfo {
   final List<String> reasons;
   final double? completionPercentage;
 
-  const TranscodingInfo({
-    required this.isVideoDirect,
-    required this.isAudioDirect,
-    this.hardwareAcceleration,
-    this.bitrate,
-    this.transcodedVideo,
-    this.transcodedAudio,
-    required this.reasons,
-    this.completionPercentage
-  });
+  const TranscodingInfo(
+      {required this.isVideoDirect,
+      required this.isAudioDirect,
+      this.hardwareAcceleration,
+      this.bitrate,
+      this.transcodedVideo,
+      this.transcodedAudio,
+      required this.reasons,
+      this.completionPercentage});
 
   factory TranscodingInfo.fromJson(Map<String, dynamic> json) {
     return TranscodingInfo(
@@ -428,7 +451,7 @@ class TranscodingInfo {
 class PlaybackEntry {
   final String itemId;
   final String? parentItemId;
-  final ContentKind contentKind;
+  final ContentType contentType;
   final ContentIdentity identity;
   final UserInfo user;
   final ClientInfo client;
@@ -441,7 +464,7 @@ class PlaybackEntry {
   const PlaybackEntry({
     required this.itemId,
     this.parentItemId,
-    required this.contentKind,
+    required this.contentType,
     required this.identity,
     required this.user,
     required this.client,
@@ -452,20 +475,11 @@ class PlaybackEntry {
     required this.isPaused,
   });
 
-  factory PlaybackEntry.fromJson(String baseUrl,Map<String, dynamic> json) {
-    ContentKind contentKind;
-    if (json['content_kind'] == 0) {
-      contentKind = ContentKind.movie;
-    } else if (json['content_kind'] == 1) {
-      contentKind = ContentKind.episode;
-    } else {
-      contentKind = ContentKind.other;
-    }
-
+  factory PlaybackEntry.fromJson(String baseUrl, Map<String, dynamic> json) {
     return PlaybackEntry(
       itemId: json['item_id'],
       parentItemId: json['parent_item_id'],
-      contentKind: contentKind,
+      contentType: ContentType.fromApiKind(json['content_kind']),
       identity: ContentIdentity.fromJson(baseUrl, json['identity']),
       user: UserInfo.fromJson(baseUrl, json['user']),
       client: ClientInfo.fromJson(json['client']),
@@ -479,23 +493,20 @@ class PlaybackEntry {
     );
   }
 
-  factory PlaybackEntry.fromSessionJson(String baseUrl, Map<String, dynamic> json) {
+  factory PlaybackEntry.fromSessionJson(
+      String baseUrl, Map<String, dynamic> json) {
     final nowPlayingItem = json['NowPlayingItem'] as Map<String, dynamic>?;
-
-    final contentKind = (nowPlayingItem?['Type'] == 'Movie')
-        ? ContentKind.movie
-        : (nowPlayingItem?['Type'] == 'Episode')
-            ? ContentKind.episode
-            : ContentKind.other;
+    final contentType = ContentType.fromApiKind(nowPlayingItem?['Type']);
 
     return PlaybackEntry(
       itemId: nowPlayingItem?['Id']?.toString() ?? '',
       parentItemId: nowPlayingItem?['ParentId']?.toString(),
-      contentKind: contentKind,
-      identity: ContentIdentity.fromSessionJson(baseUrl, contentKind, json),
+      contentType: contentType,
+      identity: ContentIdentity.fromSessionJson(baseUrl, contentType, json),
       user: UserInfo.fromSessionJson(baseUrl, json),
       client: ClientInfo.fromSessionJson(json),
-      timing: TimingInfo.fromSessionJson(nowPlayingItem?['RunTimeTicks'] as int?, json),
+      timing: TimingInfo.fromSessionJson(
+          nowPlayingItem?['RunTimeTicks'] as int?, json),
       streams: StreamInfo.fromSessionJson(json),
       transcoding: json['TranscodingInfo'] != null
           ? TranscodingInfo.fromSessionJson(json['TranscodingInfo'])

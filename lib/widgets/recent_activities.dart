@@ -1,20 +1,95 @@
 import 'package:flutter/material.dart';
+import 'package:jellydash/scaffolds/app_scaffold.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
+import 'package:jellydash/types/playback_entry.dart';
+import 'package:jellydash/widgets/error_message.dart';
+import 'package:jellydash/widgets/playback_entry_card.dart';
 
-class RecentActivityCard extends StatelessWidget {
-  const RecentActivityCard({super.key});
+class RecentActivities extends StatelessWidget {
+  final bool isLoading;
+  final List<PlaybackEntry> historyEntries;
+  final Exception? error;
+
+  const RecentActivities(
+      {super.key,
+      required this.isLoading,
+      required this.historyEntries,
+      this.error});
+
+  Widget getContent(bool isLoading, List<PlaybackEntry> historyEntries) {
+    if (isLoading) {
+      return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(),
+        ),
+      ]);
+    }
+
+    if (error != null) {
+      return ErrorMessage(error: error!);
+    }
+
+    if (historyEntries.isEmpty) {
+      return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Padding(
+          padding: EdgeInsets.all(24),
+          child: Text('History is in the making...'),
+        ),
+      ]);
+    }
+
+    const spacing = 16.0;
+    const minCardWidth = (AppScaffold.maxContentWidth / 3) - (spacing * 2);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth
+            .clamp(0, AppScaffold.maxContentWidth)
+            .toDouble();
+
+        // Decide how many columns we can fit based on a minimum card width.
+        int columns;
+        if (availableWidth >= minCardWidth * 3) {
+          columns = 3;
+        } else if (availableWidth >= minCardWidth * 2) {
+          columns = 2;
+        } else {
+          columns = 1;
+        }
+
+        // Compute the width each card should take so that:
+        //   columns * cardWidth + (columns - 1) * spacing == availableWidth
+        final totalSpacing = spacing * (columns - 1);
+        final cardWidth = (availableWidth - totalSpacing) / columns;
+
+        return Wrap(
+          spacing: spacing, // space between columns only
+          // runSpacing: spacing,
+          children: historyEntries.map((entry) {
+            return SizedBox(
+              width: cardWidth,
+              child: PlaybackEntryCard(entry: entry),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
         children: [
-          Text(
+          const Text(
             'Recent Activities',
             style: JellydashTextStyles.sectionTitle,
           ),
+          getContent(isLoading, historyEntries),
         ],
       ),
     );

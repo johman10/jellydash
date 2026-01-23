@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/screens/settings_screen.dart';
 import 'package:jellydash/services/app_settings_service.dart';
@@ -42,7 +43,8 @@ void main() {
 
       await tester.pumpWidget(wrapSettings(settings));
 
-      expect(find.widgetWithText(TextFormField, 'API Hostname'), findsOneWidget);
+      expect(
+          find.widgetWithText(TextFormField, 'API Hostname'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'i.e. http://localhost:8096'),
           findsOneWidget);
       expect(find.widgetWithText(TextFormField, 'http://localhost:8097'),
@@ -81,6 +83,7 @@ void main() {
     });
 
     testWidgets('can fill and save form', (tester) async {
+      await dotenv.load(isOptional: true);
       final settings = baseSettings();
 
       await tester.pumpWidget(wrapSettings(settings));

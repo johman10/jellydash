@@ -23,7 +23,7 @@ void main() {
       return PlaybackEntry(
         itemId: 'item1',
         parentItemId: null,
-        contentKind: ContentKind.episode,
+        contentType: ContentType.episode,
         identity: const ContentIdentity(
           title: 'Show',
           seasonNumber: 1,
@@ -55,8 +55,10 @@ void main() {
       expect(find.text('It\'s quiet... too quiet.'), findsOneWidget);
     });
 
-    testWidgets('renders one column on narrow width', (WidgetTester tester) async {
-      final sessions = List<PlaybackEntry>.generate(3, (i) => buildEntry('User$i'));
+    testWidgets('renders one column on narrow width',
+        (WidgetTester tester) async {
+      final sessions =
+          List<PlaybackEntry>.generate(3, (i) => buildEntry('User$i'));
 
       // Use a tall surface so the column has enough vertical space
       await tester.binding.setSurfaceSize(const Size(320, 1200));
@@ -86,8 +88,10 @@ void main() {
       expect(p1.dy, lessThan(p2.dy));
     });
 
-    testWidgets('renders two columns on medium width', (WidgetTester tester) async {
-      final sessions = List<PlaybackEntry>.generate(3, (i) => buildEntry('User$i'));
+    testWidgets('renders two columns on medium width',
+        (WidgetTester tester) async {
+      final sessions =
+          List<PlaybackEntry>.generate(3, (i) => buildEntry('User$i'));
 
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -110,8 +114,10 @@ void main() {
       expect(p0.dx, lessThan(p1.dx));
     });
 
-    testWidgets('renders three columns on wide width', (WidgetTester tester) async {
-      final sessions = List<PlaybackEntry>.generate(3, (i) => buildEntry('User$i'));
+    testWidgets('renders three columns on wide width',
+        (WidgetTester tester) async {
+      final sessions =
+          List<PlaybackEntry>.generate(3, (i) => buildEntry('User$i'));
 
       await tester.binding.setSurfaceSize(const Size(1200, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -135,8 +141,10 @@ void main() {
       expect(p1.dx, lessThan(p2.dx));
     });
 
-    testWidgets('renders multiple sessions without overflow', (WidgetTester tester) async {
-      final sessions = List<PlaybackEntry>.generate(6, (i) => buildEntry('User$i'));
+    testWidgets('renders multiple sessions without overflow',
+        (WidgetTester tester) async {
+      final sessions =
+          List<PlaybackEntry>.generate(6, (i) => buildEntry('User$i'));
 
       await tester.binding.setSurfaceSize(const Size(1200, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));

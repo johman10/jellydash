@@ -1,10 +1,8 @@
 import 'dart:async';
 
-import 'package:jellydash/types/history_response.dart';
-import 'package:jellydash/types/playback_entry.dart';
+import 'package:jellydash/types/activity_response.dart';
 
 abstract class ApiService {
-  Future<List<PlaybackEntry>> fetchNowPlaying();
-
-  Future<HistoryResponse> fetchPlaybackHistory(String? cursor);
+  Future<ActivityResponse> fetchActivity(
+      bool includeActive, int? limit, String? cursor);
 }

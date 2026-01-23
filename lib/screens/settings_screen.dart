@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
+import 'package:jellydash/services/settings_holder.dart';
 import '../services/app_settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -22,11 +23,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _baseUrlController =
-      TextEditingController(text: widget.appSettings.jellyfinBaseUrl);
+        TextEditingController(text: widget.appSettings.jellyfinBaseUrl);
     _apiKeyController =
-      TextEditingController(text: widget.appSettings.jellyfinApiKey);
+        TextEditingController(text: widget.appSettings.jellyfinApiKey);
     _pollingIntervalController = TextEditingController(
-      text: widget.appSettings.pollingInterval.toString());
+        text: widget.appSettings.pollingInterval.toString());
     _usePluginApi = widget.appSettings.usePluginApi;
   }
 
@@ -38,8 +39,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _saveSettings(
-      String baseUrl, String apiKey, int pollingInterval, bool usePluginApi) async {
+  Future<void> _saveSettings(String baseUrl, String apiKey, int pollingInterval,
+      bool usePluginApi) async {
     final service = AppSettingsService();
     await service.saveJellyfinBaseUrl(baseUrl);
     await service.saveJellyfinApiKey(apiKey);
@@ -50,12 +51,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> handleSavePressed() async {
     var scaffoldMessenger = ScaffoldMessenger.of(context);
     if (_formKey.currentState!.validate()) {
+      final service = AppSettingsService();
+
       await _saveSettings(
         _baseUrlController.text,
         _apiKeyController.text,
         int.parse(_pollingIntervalController.text),
         _usePluginApi,
       );
+
+      // Apply settings live so the dashboard can react immediately.
+      final updatedSettings = await service.loadSettings();
+
+      if (!mounted) return;
+
+      final settingsNotifier = SettingsHolder.maybeNotifierOf(context);
+      if (settingsNotifier != null) {
+        settingsNotifier.value = updatedSettings;
+      }
+
       scaffoldMessenger.showSnackBar(
         const SnackBar(content: Text('Settings saved')),
       );
@@ -84,7 +98,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     validator: (value) {
                       var parsedUri = Uri.tryParse(_baseUrlController.text);
-                      if (value == null || value.isEmpty || (parsedUri != null && !parsedUri.isAbsolute)) {
+                      if (value == null ||
+                          value.isEmpty ||
+                          (parsedUri != null && !parsedUri.isAbsolute)) {
                         return 'Please enter the Jellyfin hostname';
                       }
                       return null;
@@ -125,7 +141,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   SwitchListTile(
                     title: const Text('Use Jellydash Plugin API'),
-                    subtitle: const Text('Use the Jellydash plugin endpoints for activity and history. This requires the plugin to be installed on your Jellyfin instance, but offers more features.'),
+                    subtitle: const Text(
+                        'Use the Jellydash plugin endpoints for activity and history. This requires the plugin to be installed on your Jellyfin instance, but offers more features.'),
                     contentPadding: EdgeInsets.zero,
                     value: _usePluginApi,
                     onChanged: (val) {

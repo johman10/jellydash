@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:jellydash/services/api_service.dart';
 import 'package:jellydash/services/api_exceptions.dart';
-import 'package:jellydash/types/history_response.dart';
-import 'package:jellydash/types/playback_entry.dart';
+import 'package:jellydash/types/activity_response.dart';
 
 class JellyDashApiService implements ApiService {
   final String baseUrl;
@@ -34,40 +33,28 @@ class JellyDashApiService implements ApiService {
   }
 
   @override
-  Future<List<PlaybackEntry>> fetchNowPlaying() async {
-    final url = Uri.parse('$baseUrl/Jellydash/now-playing');
-    final response = await _get(url);
-    if (response.statusCode == 200) {
-      var parsedResponse = jsonDecode(response.body) as List<dynamic>;
-      return parsedResponse
-          .map((nowPlayingJson) => PlaybackEntry.fromJson(baseUrl, nowPlayingJson))
-          .toList();
-    } else if (response.statusCode == 404) {
-      throw NotFoundException(
-        'Endpoint not found (404). Check your base URL and that the Jellydash plugin is installed.',
-        NotFoundService.jellydash,
-      );
-    } else {
-      throw Exception('Failed to load now playing: ${response.statusCode}');
-    }
-  }
-
-  @override
-  Future<HistoryResponse> fetchPlaybackHistory(String? cursor) async {
-    final url = Uri.parse('$baseUrl/Jellydash/history').replace(queryParameters: {
+  Future<ActivityResponse> fetchActivity(
+    bool includeActive,
+    int? limit,
+    String? cursor,
+  ) async {
+    final url =
+        Uri.parse('$baseUrl/Jellydash/activity').replace(queryParameters: {
       if (cursor != null) 'cursor': cursor,
+      if (limit != null) 'limit': limit.toString(),
+      'includeActive': includeActive.toString(),
     });
     final response = await _get(url);
     if (response.statusCode == 200) {
       var parsedResponse = jsonDecode(response.body) as Map<String, dynamic>;
-      return HistoryResponse.fromJson(baseUrl, parsedResponse);
+      return ActivityResponse.fromJson(baseUrl, parsedResponse);
     } else if (response.statusCode == 404) {
       throw NotFoundException(
         'Endpoint not found (404). Check your base URL and that the Jellydash plugin is installed.',
         NotFoundService.jellydash,
       );
     } else {
-      throw Exception('Failed to load history: ${response.statusCode}');
+      throw Exception('Failed to load activity: ${response.statusCode}');
     }
   }
 }

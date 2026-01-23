@@ -22,9 +22,8 @@ class AppScaffold extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: maxContentWidth,
-            minHeight: constraints.maxHeight - kToolbarHeight
-          ),
+              maxWidth: maxContentWidth,
+              minHeight: constraints.maxHeight - kToolbarHeight),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(

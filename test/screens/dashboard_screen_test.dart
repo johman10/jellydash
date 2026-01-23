@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/screens/dashboard_screen.dart';
+import 'package:jellydash/services/api_exceptions.dart';
 import 'package:jellydash/services/jellyfin_api_service.dart';
+import 'package:jellydash/types/activity_response.dart';
 import 'package:jellydash/types/playback_entry.dart';
 import 'package:jellydash/widgets/now_playing.dart';
 import 'package:mockito/annotations.dart';
@@ -19,8 +21,9 @@ void main() {
         GoRoute(
           path: '/',
           builder: (context, state) => DashboardScreen(
-            apiService: apiService,
+            usePluginApi: false,
             pollingInterval: pollingInterval,
+            apiService: apiService,
           ),
         ),
       ],
@@ -54,10 +57,15 @@ void main() {
     final effectiveDuration = duration ?? const Duration(minutes: 10);
     final effectiveProgress = progress ?? const Duration(minutes: 1);
 
+    // Determine content type based on whether it's an episode
+    final contentType = (season != null && episode != null)
+        ? ContentType.episode
+        : ContentType.other;
+
     return PlaybackEntry(
       itemId: 'item1',
       parentItemId: null,
-      contentKind: ContentKind.other,
+      contentType: contentType,
       identity: ContentIdentity(
         primaryImageUrl: imageUrl,
         title: title ?? 'Title',
@@ -102,18 +110,21 @@ void main() {
     });
 
     testWidgets('renders without error', (tester) async {
-      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseEntry(
-              userName: 'TestUser',
-              seriesName: 'Test Series',
-              season: 1,
-              episode: 2,
-              year: 2022,
-              imageUrl: '/Items/12345/Images/Primary',
-              progress: const Duration(minutes: 45),
-              duration: const Duration(minutes: 60),
-            ),
-          ]);
+      when(mockApiService.fetchActivity(true, 20, null))
+          .thenAnswer((_) async => ActivityResponse(
+                items: [
+                  baseEntry(
+                    userName: 'TestUser',
+                    seriesName: 'Test Series',
+                    season: 1,
+                    episode: 2,
+                    year: 2022,
+                    imageUrl: '/Items/12345/Images/Primary',
+                    progress: const Duration(minutes: 45),
+                    duration: const Duration(minutes: 60),
+                  ),
+                ],
+              ));
 
       await tester.pumpWidget(wrapDashboard(mockApiService));
 
@@ -121,22 +132,26 @@ void main() {
     });
 
     testWidgets('shows loading indicator and activities', (tester) async {
-      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseEntry(
-              userName: 'TestUser',
-              seriesName: 'Test Series',
-              season: 1,
-              episode: 2,
-              year: 2022,
-              imageUrl: '/Items/12345/Images/Primary',
-              progress: const Duration(minutes: 45),
-              duration: const Duration(minutes: 60),
-            ),
-          ]);
+      when(mockApiService.fetchActivity(true, 20, null))
+          .thenAnswer((_) async => ActivityResponse(
+                items: [
+                  baseEntry(
+                    userName: 'TestUser',
+                    seriesName: 'Test Series',
+                    season: 1,
+                    episode: 2,
+                    year: 2022,
+                    imageUrl: '/Items/12345/Images/Primary',
+                    progress: const Duration(minutes: 45),
+                    duration: const Duration(minutes: 60),
+                  ),
+                ],
+              ));
 
       await tester.pumpWidget(wrapDashboard(mockApiService));
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // Both NowPlaying and RecentActivities show loading indicators initially
+      expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
       await tester.pump();
       expect(find.byType(NowPlaying), findsOneWidget);
     });
@@ -144,16 +159,19 @@ void main() {
     testWidgets('shows updated sessions when they change', (tester) async {
       const pollingInterval = 1;
 
-      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseEntry(
-              userName: 'User1',
-              seriesName: 'Show1',
-              season: 1,
-              episode: 1,
-              progress: const Duration(minutes: 1),
-              duration: const Duration(minutes: 10),
-            ),
-          ]);
+      when(mockApiService.fetchActivity(true, 20, null))
+          .thenAnswer((_) async => ActivityResponse(
+                items: [
+                  baseEntry(
+                    userName: 'User1',
+                    seriesName: 'Show1',
+                    season: 1,
+                    episode: 1,
+                    progress: const Duration(minutes: 1),
+                    duration: const Duration(minutes: 10),
+                  ),
+                ],
+              ));
 
       await tester.pumpWidget(
         wrapDashboard(
@@ -165,16 +183,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('User1'), findsOneWidget);
 
-      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseEntry(
-              userName: 'User2',
-              seriesName: 'Show2',
-              season: 2,
-              episode: 2,
-              progress: const Duration(minutes: 9),
-              duration: const Duration(minutes: 10),
-            ),
-          ]);
+      when(mockApiService.fetchActivity(true, 20, null))
+          .thenAnswer((_) async => ActivityResponse(
+                items: [
+                  baseEntry(
+                    userName: 'User2',
+                    seriesName: 'Show2',
+                    season: 2,
+                    episode: 2,
+                    progress: const Duration(minutes: 9),
+                    duration: const Duration(minutes: 10),
+                  ),
+                ],
+              ));
 
       await tester.pump(const Duration(seconds: pollingInterval + 1));
       await tester.pumpAndSettle();
@@ -184,18 +205,21 @@ void main() {
     });
 
     testWidgets('shows RecentActivities', (tester) async {
-      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseEntry(
-              userName: 'TestUser',
-              seriesName: 'Test Series',
-              season: 1,
-              episode: 2,
-              year: 2022,
-              imageUrl: '/Items/12345/Images/Primary',
-              progress: const Duration(minutes: 45),
-              duration: const Duration(minutes: 60),
-            ),
-          ]);
+      when(mockApiService.fetchActivity(true, 20, null))
+          .thenAnswer((_) async => ActivityResponse(
+                items: [
+                  baseEntry(
+                    userName: 'TestUser',
+                    seriesName: 'Test Series',
+                    season: 1,
+                    episode: 2,
+                    year: 2022,
+                    imageUrl: '/Items/12345/Images/Primary',
+                    progress: const Duration(minutes: 45),
+                    duration: const Duration(minutes: 60),
+                  ),
+                ],
+              ));
 
       await tester.pumpWidget(wrapDashboard(mockApiService));
 
@@ -203,18 +227,21 @@ void main() {
     });
 
     testWidgets('shows CurrentActivities with mock session', (tester) async {
-      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseEntry(
-              userName: 'TestUser',
-              seriesName: 'Test Series',
-              season: 1,
-              episode: 2,
-              year: 2022,
-              imageUrl: '/Items/12345/Images/Primary',
-              progress: const Duration(minutes: 45),
-              duration: const Duration(minutes: 60),
-            ),
-          ]);
+      when(mockApiService.fetchActivity(true, 20, null))
+          .thenAnswer((_) async => ActivityResponse(
+                items: [
+                  baseEntry(
+                    userName: 'TestUser',
+                    seriesName: 'Test Series',
+                    season: 1,
+                    episode: 2,
+                    year: 2022,
+                    imageUrl: '/Items/12345/Images/Primary',
+                    progress: const Duration(minutes: 45),
+                    duration: const Duration(minutes: 60),
+                  ),
+                ],
+              ));
 
       await tester.pumpWidget(wrapDashboard(mockApiService));
       await tester.pumpAndSettle();
@@ -223,8 +250,10 @@ void main() {
       expect(find.textContaining('Test Series'), findsOneWidget);
     });
 
-    testWidgets('shows no activities when session list is empty', (tester) async {
-      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => []);
+    testWidgets('shows no activities when session list is empty',
+        (tester) async {
+      when(mockApiService.fetchActivity(true, 20, null))
+          .thenAnswer((_) async => ActivityResponse(items: []));
 
       await tester.pumpWidget(wrapDashboard(mockApiService));
       await tester.pumpAndSettle();
@@ -233,30 +262,108 @@ void main() {
     });
 
     testWidgets('shows multiple sessions', (tester) async {
-      when(mockApiService.fetchNowPlaying()).thenAnswer((_) async => [
-            baseEntry(
-              userName: 'User1',
-              seriesName: 'Show1',
-              season: 1,
-              episode: 1,
-              progress: const Duration(minutes: 1),
-              duration: const Duration(minutes: 10),
-            ),
-            baseEntry(
-              userName: 'User2',
-              seriesName: 'Show2',
-              season: 2,
-              episode: 2,
-              progress: const Duration(minutes: 9),
-              duration: const Duration(minutes: 10),
-            ),
-          ]);
+      when(mockApiService.fetchActivity(true, 20, null))
+          .thenAnswer((_) async => ActivityResponse(
+                items: [
+                  baseEntry(
+                    userName: 'User1',
+                    seriesName: 'Show1',
+                    season: 1,
+                    episode: 1,
+                    progress: const Duration(minutes: 1),
+                    duration: const Duration(minutes: 10),
+                  ),
+                  baseEntry(
+                    userName: 'User2',
+                    seriesName: 'Show2',
+                    season: 2,
+                    episode: 2,
+                    progress: const Duration(minutes: 9),
+                    duration: const Duration(minutes: 10),
+                  ),
+                ],
+              ));
 
       await tester.pumpWidget(wrapDashboard(mockApiService));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('User1'), findsOneWidget);
       expect(find.textContaining('User2'), findsOneWidget);
+    });
+
+    testWidgets('keeps historic data visible when refresh fails',
+        (tester) async {
+      var callCount = 0;
+
+      when(mockApiService.fetchActivity(true, 20, null)).thenAnswer((_) async {
+        callCount += 1;
+        if (callCount == 1) {
+          return ActivityResponse(
+            items: [
+              baseEntry(
+                userName: 'User1',
+                seriesName: 'Show1',
+                season: 1,
+                episode: 1,
+              ),
+            ],
+          );
+        }
+
+        throw NetworkException(
+          kind: NetworkFailureKind.connection,
+          message: 'Could not connect',
+        );
+      });
+
+      await tester.pumpWidget(
+        wrapDashboard(
+          mockApiService,
+          pollingInterval: 1,
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.textContaining('User1'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+
+      // Old data stays visible.
+      expect(find.textContaining('User1'), findsOneWidget);
+      // A snackbar should inform the user that refresh failed.
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
+    testWidgets('shows retry button when initial fetch fails fatally',
+        (tester) async {
+      when(mockApiService.fetchActivity(true, 20, null)).thenThrow(
+        UnauthorizedException('Unauthorized (401). Check your API key.'),
+      );
+
+      await tester.pumpWidget(wrapDashboard(mockApiService));
+      await tester.pumpAndSettle();
+
+      expect(find.text('You shall not pass!'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      when(mockApiService.fetchActivity(true, 20, null))
+          .thenAnswer((_) async => ActivityResponse(
+                items: [
+                  baseEntry(
+                    userName: 'User1',
+                    seriesName: 'Show1',
+                    season: 1,
+                    episode: 1,
+                  ),
+                ],
+              ));
+
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('User1'), findsOneWidget);
     });
   });
 }

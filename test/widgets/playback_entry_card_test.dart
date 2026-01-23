@@ -18,6 +18,7 @@ void main() {
   PlaybackEntry baseEntry({
     String? title,
     String? seriesName,
+    ContentType contentType = ContentType.other,
     int? season,
     int? episode,
     int? year,
@@ -37,7 +38,7 @@ void main() {
     return PlaybackEntry(
       itemId: 'item1',
       parentItemId: null,
-      contentKind: ContentKind.other,
+      contentType: contentType,
       identity: ContentIdentity(
         primaryImageUrl: imageUrl,
         title: title ?? 'Title',
@@ -80,7 +81,8 @@ void main() {
       expect(find.text('2024'), findsNothing);
     });
 
-    testWidgets('shows year when no season/episode but year is set', (tester) async {
+    testWidgets('shows year when no season/episode but year is set',
+        (tester) async {
       final session = baseEntry(season: 0, episode: 0, year: 2024);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
@@ -89,7 +91,8 @@ void main() {
       expect(find.textContaining('S0'), findsNothing);
     });
 
-    testWidgets('shows neither season/episode nor year when not provided', (tester) async {
+    testWidgets('shows neither season/episode nor year when not provided',
+        (tester) async {
       final session = baseEntry(season: 0, episode: 0, year: null);
 
       await tester.pumpWidget(wrap(PlaybackEntryCard(entry: session)));
@@ -100,10 +103,11 @@ void main() {
   });
 
   group('CurrentActivityCard title display', () {
-    testWidgets('prefers seriesName over title when present', (tester) async {
+    testWidgets('prefers seriesName over title when episode', (tester) async {
       final entry = baseEntry(
         seriesName: 'Series Title',
         title: 'Episode Title',
+        contentType: ContentType.episode,
         season: 1,
         episode: 1,
       );
@@ -114,10 +118,11 @@ void main() {
       expect(find.text('Episode Title'), findsNothing);
     });
 
-    testWidgets('falls back to title when seriesName is null', (tester) async {
+    testWidgets('prefers title when not episode', (tester) async {
       final entry = baseEntry(
         seriesName: null,
         title: 'Movie Title',
+        contentType: ContentType.movie,
         year: 2024,
       );
 
@@ -128,7 +133,8 @@ void main() {
   });
 
   group('CurrentActivityCard remaining time display', () {
-    testWidgets('shows correct minutes left for normal progress', (tester) async {
+    testWidgets('shows correct minutes left for normal progress',
+        (tester) async {
       final session = baseEntry(
         progress: const Duration(minutes: 3),
         duration: const Duration(minutes: 10),
@@ -139,7 +145,8 @@ void main() {
       expect(find.textContaining('7 min left'), findsOneWidget);
     });
 
-    testWidgets('clamps remaining minutes to zero when progress exceeds duration',
+    testWidgets(
+        'clamps remaining minutes to zero when progress exceeds duration',
         (tester) async {
       final session = baseEntry(
         progress: const Duration(minutes: 15),
@@ -183,7 +190,8 @@ void main() {
   });
 
   group('CurrentActivityCard transcoding badges', () {
-    testWidgets('shows V and A when video and audio are transcoding', (tester) async {
+    testWidgets('shows V and A when video and audio are transcoding',
+        (tester) async {
       final session = baseEntry(
         bitrate: 1000,
         isVideoDirect: false,

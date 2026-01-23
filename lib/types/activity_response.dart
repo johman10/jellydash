@@ -1,13 +1,13 @@
 import 'package:jellydash/types/playback_entry.dart';
 
-class HistoryResponse {
+class ActivityResponse {
   final List<PlaybackEntry> items;
   final String? nextCursor;
 
-  HistoryResponse({required this.items, this.nextCursor});
+  ActivityResponse({required this.items, this.nextCursor});
 
-  factory HistoryResponse.fromJson(String baseUrl, Map<String, dynamic> json) {
-    return HistoryResponse(
+  factory ActivityResponse.fromJson(String baseUrl, Map<String, dynamic> json) {
+    return ActivityResponse(
       items: (json['items'] as List<dynamic>)
           .map((itemJson) => PlaybackEntry.fromJson(baseUrl, itemJson))
           .toList(),

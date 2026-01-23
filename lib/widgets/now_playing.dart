@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
 import 'package:jellydash/types/playback_entry.dart';
-import 'package:jellydash/widgets/error_card.dart';
+import 'package:jellydash/widgets/error_message.dart';
 import 'playback_entry_card.dart';
 
 class NowPlaying extends StatelessWidget {
@@ -11,7 +11,10 @@ class NowPlaying extends StatelessWidget {
   final Exception? error;
 
   const NowPlaying(
-      {super.key, required this.isLoading, required this.nowPlayingEntries, this.error});
+      {super.key,
+      required this.isLoading,
+      required this.nowPlayingEntries,
+      this.error});
 
   Widget getContent(bool isLoading, List<PlaybackEntry> nowPlayingEntries) {
     if (isLoading) {
@@ -24,7 +27,7 @@ class NowPlaying extends StatelessWidget {
     }
 
     if (error != null) {
-      return ErrorCard(error: error!);
+      return ErrorMessage(error: error!);
     }
 
     if (nowPlayingEntries.isEmpty) {
@@ -38,7 +41,6 @@ class NowPlaying extends StatelessWidget {
 
     const spacing = 16.0;
     const minCardWidth = (AppScaffold.maxContentWidth / 3) - (spacing * 2);
-
 
     return LayoutBuilder(
       builder: (context, constraints) {

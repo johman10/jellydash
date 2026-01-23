@@ -42,7 +42,8 @@ void main() {
     }
 
     test('sets seriesName when present', () {
-      final json = basePayload(seriesName: 'Series Title', name: 'Fallback Title');
+      final json =
+          basePayload(seriesName: 'Series Title', name: 'Fallback Title');
 
       final entry = PlaybackEntry.fromSessionJson(baseUrl, json);
 
@@ -78,7 +79,7 @@ void main() {
 
       final entry = PlaybackEntry.fromSessionJson(baseUrl, json);
 
-      expect(entry.contentKind, ContentKind.episode);
+      expect(entry.contentType, ContentType.episode);
       expect(entry.identity.primaryImageUrl,
           'https://example.com/Items/parent123/Images/Primary');
     });
@@ -92,7 +93,7 @@ void main() {
 
       final entry = PlaybackEntry.fromSessionJson(baseUrl, json);
 
-      expect(entry.contentKind, ContentKind.movie);
+      expect(entry.contentType, ContentType.movie);
       expect(entry.identity.primaryImageUrl,
           'https://example.com/Items/item1/Images/Primary');
     });

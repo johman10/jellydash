@@ -43,7 +43,7 @@ public class PlaybackEntry
     /// <summary>
     /// Gets or sets the kind of content (movie, episode, or other).
     /// </summary>
-    public ContentKind ContentKind { get; set; }
+    public ContentType ContentType { get; set; }
 
     /// <summary>
     /// Gets or sets the primary display title (series or movie name).
@@ -135,12 +135,6 @@ public class PlaybackEntry
     /// Gets or sets the ending playback position in ticks, if completed.
     /// </summary>
     public long? EndPositionTicks { get; set; }
-
-    // TODO: Move to DTO, no need to store in DB
-    // public double? StartPercentage { get; set; }
-
-    // TODO: Move to DTO, no need to store in DB
-    // public double? EndPercentage { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this playback span has fully completed.
@@ -414,12 +408,11 @@ public class PlaybackEntry
     {
         // Console.WriteLine($"Full event {JsonSerializer.Serialize(eventArgs)}");
 
-        // TODO: Move to ContentType
-        var contentKind = eventArgs.MediaInfo.Type switch
+        var contentType = eventArgs.MediaInfo.Type switch
         {
-            BaseItemKind.Movie => ContentKind.Movie,
-            BaseItemKind.Episode => ContentKind.Episode,
-            _ => ContentKind.Other
+            BaseItemKind.Movie => ContentType.Movie,
+            BaseItemKind.Episode => ContentType.Episode,
+            _ => ContentType.Other
         };
 
         var videoStream = eventArgs.MediaInfo.MediaStreams?
@@ -434,7 +427,7 @@ public class PlaybackEntry
             PlaybackId = GeneratePlaybackId(eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id),
             ItemId = eventArgs.MediaInfo.Id,
             ParentItemId = eventArgs.MediaInfo.ParentId,
-            ContentKind = contentKind,
+            ContentType = contentType,
             Title = eventArgs.MediaInfo.Name,
             Genres = eventArgs.MediaInfo.Genres != null ? new Collection<string>(eventArgs.MediaInfo.Genres) : [],
             Year = eventArgs.MediaInfo.ProductionYear,

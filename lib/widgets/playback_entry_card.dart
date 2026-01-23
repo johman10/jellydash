@@ -303,7 +303,9 @@ class PlaybackEntryCard extends StatelessWidget {
                     children: [
                       // Title
                       Text(
-                        entry.identity.seriesName ?? entry.identity.title,
+                        entry.contentType == ContentType.episode
+                            ? (entry.identity.seriesName ?? '')
+                            : entry.identity.title,
                         style: theme.textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
