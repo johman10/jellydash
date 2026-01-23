@@ -169,8 +169,8 @@ jobs:
         with:
           path: |
             ~/.cocoapods
-            ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+            macos/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('macos/Podfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pods-
 

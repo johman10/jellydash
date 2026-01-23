@@ -9,15 +9,13 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release-plugin:
-    name: Build and Release Plugin
+  build-plugin:
+    name: Build Jellyfin Plugin
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up .NET 9
         uses: actions/setup-dotnet@v4
@@ -52,14 +50,332 @@ jobs:
       - name: Create plugin ZIP
         working-directory: plugin/Jellyfin.Plugin.Jellydash/publish
         run: |
-          zip -r ../../../jellydash-${{ steps.get_version.outputs.VERSION }}.zip .
+          zip -r ../../../jellydash-plugin-${{ steps.get_version.outputs.VERSION }}.zip .
 
       - name: Calculate checksum
         id: checksum
         run: |
-          CHECKSUM=$(md5sum jellydash-${{ steps.get_version.outputs.VERSION }}.zip | cut -d ' ' -f 1)
+          CHECKSUM=$(md5sum jellydash-plugin-${{ steps.get_version.outputs.VERSION }}.zip | cut -d ' ' -f 1)
           echo "CHECKSUM=$CHECKSUM" >> $GITHUB_OUTPUT
           echo "Checksum: $CHECKSUM"
+
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellydash-plugin
+          path: jellydash-plugin-${{ steps.get_version.outputs.VERSION }}.zip
+
+      - name: Store checksum
+        run: echo "${{ steps.checksum.outputs.CHECKSUM }}" > plugin-checksum.txt
+
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-checksum
+          path: plugin-checksum.txt
+
+  build-web:
+    name: Build Web App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build web app
+        run: flutter build web --release --base-href "/jellydash/"
+
+      - name: Create web archive
+        run: |
+          cd build/web
+          tar -czf ../../jellydash-web-${{ steps.get_version.outputs.VERSION }}.tar.gz .
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellydash-web
+          path: jellydash-web-${{ steps.get_version.outputs.VERSION }}.tar.gz
+
+  build-android:
+    name: Build Android App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Build App Bundle
+        run: flutter build appbundle --release
+
+      - name: Rename artifacts
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk jellydash-android-${{ steps.get_version.outputs.VERSION }}.apk
+          cp build/app/outputs/bundle/release/app-release.aab jellydash-android-${{ steps.get_version.outputs.VERSION }}.aab
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellydash-android
+          path: |
+            jellydash-android-${{ steps.get_version.outputs.VERSION }}.apk
+            jellydash-android-${{ steps.get_version.outputs.VERSION }}.aab
+
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cocoapods
+            ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build iOS app (no signing)
+        run: flutter build ios --release --no-codesign
+
+      - name: Create iOS archive
+        run: |
+          cd build/ios/iphoneos
+          tar -czf ../../../jellydash-ios-${{ steps.get_version.outputs.VERSION }}.tar.gz Runner.app
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellydash-ios
+          path: jellydash-ios-${{ steps.get_version.outputs.VERSION }}.tar.gz
+
+  build-macos:
+    name: Build macOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cocoapods
+            macos/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('macos/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build macOS app
+        run: flutter build macos --release
+
+      - name: Create macOS DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "Jellydash" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --app-drop-link 450 185 \
+            jellydash-macos-${{ steps.get_version.outputs.VERSION }}.dmg \
+            build/macos/Build/Products/Release/jellydash.app
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellydash-macos
+          path: jellydash-macos-${{ steps.get_version.outputs.VERSION }}.dmg
+
+  build-linux:
+    name: Build Linux App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Linux app
+        run: flutter build linux --release
+
+      - name: Create Linux archive
+        run: |
+          cd build/linux/x64/release/bundle
+          tar -czf ../../../../../jellydash-linux-${{ steps.get_version.outputs.VERSION }}.tar.gz .
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellydash-linux
+          path: jellydash-linux-${{ steps.get_version.outputs.VERSION }}.tar.gz
+
+  build-windows:
+    name: Build Windows App
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get version from tag
+        id: get_version
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows app
+        run: flutter build windows --release
+
+      - name: Create Windows ZIP
+        shell: bash
+        run: |
+          cd build/windows/x64/runner/Release
+          7z a ../../../../../jellydash-windows-${{ steps.get_version.outputs.VERSION }}.zip .
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellydash-windows
+          path: jellydash-windows-${{ steps.get_version.outputs.VERSION }}.zip
+
+  release:
+    name: Create Unified Release
+    needs: [build-plugin, build-web, build-android, build-ios, build-macos, build-linux, build-windows]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Load plugin checksum
+        id: checksum
+        run: |
+          CHECKSUM=$(cat artifacts/plugin-checksum/plugin-checksum.txt)
+          echo "CHECKSUM=$CHECKSUM" >> $GITHUB_OUTPUT
 
       - name: Generate release notes
         id: release_notes
@@ -79,7 +395,7 @@ jobs:
           VERSION=${{ steps.get_version.outputs.VERSION }}
           CHECKSUM=${{ steps.checksum.outputs.CHECKSUM }}
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S")
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/jellydash-${VERSION}.zip"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/jellydash-plugin-${VERSION}.zip"
 
           # Get the target ABI from Jellyfin.Controller package version in csproj
           TARGET_ABI=$(grep -oP 'Jellyfin.Controller" Version="\K[^"]+' plugin/Jellyfin.Plugin.Jellydash/Jellyfin.Plugin.Jellydash.csproj)
@@ -125,15 +441,47 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin master
+          git checkout master
+          git pull --rebase origin master
           git add plugin/manifest.json
           git commit -m "Update manifest.json for v${{ steps.get_version.outputs.VERSION }}"
-          git push origin HEAD:main
+          git push origin master
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: jellydash-${{ steps.get_version.outputs.VERSION }}.zip
-          body: ${{ steps.release_notes.outputs.result }}
+          files: |
+            artifacts/jellydash-plugin/*.zip
+            artifacts/jellydash-web/*.tar.gz
+            artifacts/jellydash-android/*.apk
+            artifacts/jellydash-android/*.aab
+            artifacts/jellydash-ios/*.tar.gz
+            artifacts/jellydash-macos/*.dmg
+            artifacts/jellydash-linux/*.tar.gz
+            artifacts/jellydash-windows/*.zip
+          body: |
+            ${{ steps.release_notes.outputs.result }}
+
+            ## Downloads
+
+            ### Jellyfin Plugin
+            - **jellydash-plugin-${{ steps.get_version.outputs.VERSION }}.zip**: Install via Jellyfin's plugin catalog or manual upload
+
+            ### Flutter Apps
+            - **Web**: Extract tar.gz and serve with a web server
+            - **Android**: Install APK directly or upload AAB to Play Store
+            - **iOS**: Unsigned archive (requires code signing)
+            - **macOS**: Open DMG and drag to Applications
+            - **Linux**: Extract tar.gz and run `jellydash` executable
+            - **Windows**: Extract ZIP and run `jellydash.exe`
+
+            ## Installation
+
+            Add the plugin repository to Jellyfin:
+            ```
+            https://raw.githubusercontent.com/${{ github.repository }}/main/plugin/manifest.json
+            ```
           draft: false
           prerelease: false
         env:
