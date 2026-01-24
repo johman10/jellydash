@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:jellydash/services/api_service.dart';
-import 'package:jellydash/services/api_exceptions.dart';
+import 'package:jellydash/services/exceptions.dart';
 import 'package:jellydash/types/activity_response.dart';
 
 class JellyDashApiService implements ApiService {
@@ -16,19 +16,12 @@ class JellyDashApiService implements ApiService {
       return await http.get(url, headers: {
         'X-Emby-Token': apiKey,
       }).timeout(const Duration(seconds: 10));
-    } on TimeoutException catch (e) {
-      throw NetworkException(
-        kind: NetworkFailureKind.timeout,
-        message: 'Timed out connecting to the server.',
-        cause: e,
-      );
-    } on http.ClientException catch (e) {
-      throw NetworkException(
-        kind: NetworkFailureKind.connection,
-        message:
-            'Could not connect to the server. Check the server and network.',
-        cause: e,
-      );
+    } on TimeoutException catch (_) {
+      throw NetworkException(NetworkExceptionType.timeout);
+    } on http.ClientException catch (_) {
+      throw NetworkException(NetworkExceptionType.connection);
+    } catch (e) {
+      throw NetworkException(NetworkExceptionType.unknown);
     }
   }
 
@@ -49,10 +42,9 @@ class JellyDashApiService implements ApiService {
       var parsedResponse = jsonDecode(response.body) as Map<String, dynamic>;
       return ActivityResponse.fromJson(baseUrl, parsedResponse);
     } else if (response.statusCode == 404) {
-      throw NotFoundException(
-        'Endpoint not found (404). Check your base URL and that the Jellydash plugin is installed.',
-        NotFoundService.jellydash,
-      );
+      throw NotFoundException();
+    } else if (response.statusCode == 401) {
+      throw UnauthorizedException();
     } else {
       throw Exception('Failed to load activity: ${response.statusCode}');
     }

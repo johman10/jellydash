@@ -2,21 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
 import 'package:jellydash/types/playback_entry.dart';
-import 'package:jellydash/widgets/error_message.dart';
-import 'package:jellydash/widgets/playback_entry_card.dart';
+import 'playback_entry_card.dart';
 
-class RecentActivities extends StatelessWidget {
+class DashboardSection extends StatelessWidget {
   final bool isLoading;
-  final List<PlaybackEntry> historyEntries;
+  final List<PlaybackEntry> entries;
   final Exception? error;
+  final String sectionTitle;
+  final String emptyMessage;
 
-  const RecentActivities(
+  const DashboardSection(
       {super.key,
       required this.isLoading,
-      required this.historyEntries,
+      required this.entries,
+      required this.sectionTitle,
+      required this.emptyMessage,
       this.error});
 
-  Widget getContent(bool isLoading, List<PlaybackEntry> historyEntries) {
+  Widget getContent(bool isLoading, List<PlaybackEntry> entries, String emptyMessage) {
     if (isLoading) {
       return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Padding(
@@ -26,15 +29,11 @@ class RecentActivities extends StatelessWidget {
       ]);
     }
 
-    if (error != null) {
-      return ErrorMessage(error: error!);
-    }
-
-    if (historyEntries.isEmpty) {
-      return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+    if (entries.isEmpty) {
+      return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Padding(
           padding: EdgeInsets.all(24),
-          child: Text('History is in the making...'),
+          child: Text(emptyMessage),
         ),
       ]);
     }
@@ -66,7 +65,7 @@ class RecentActivities extends StatelessWidget {
         return Wrap(
           spacing: spacing, // space between columns only
           // runSpacing: spacing,
-          children: historyEntries.map((entry) {
+          children: entries.map((entry) {
             return SizedBox(
               width: cardWidth,
               child: PlaybackEntryCard(entry: entry),
@@ -85,11 +84,11 @@ class RecentActivities extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 8,
         children: [
-          const Text(
-            'Recent Activities',
+          Text(
+            sectionTitle,
             style: JellydashTextStyles.sectionTitle,
           ),
-          getContent(isLoading, historyEntries),
+          getContent(isLoading, entries, emptyMessage),
         ],
       ),
     );

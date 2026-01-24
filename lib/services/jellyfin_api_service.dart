@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:jellydash/services/api_service.dart';
-import 'package:jellydash/services/api_exceptions.dart';
+import 'package:jellydash/services/exceptions.dart';
 import 'package:jellydash/types/activity_response.dart';
 import 'package:jellydash/types/playback_entry.dart';
 
@@ -17,19 +17,10 @@ class JellyfinApiService implements ApiService {
       return await http.get(url, headers: {
         'X-Emby-Token': apiKey,
       }).timeout(const Duration(seconds: 10));
-    } on TimeoutException catch (e) {
-      throw NetworkException(
-        kind: NetworkFailureKind.timeout,
-        message: 'Timed out connecting to the server.',
-        cause: e,
-      );
-    } on http.ClientException catch (e) {
-      throw NetworkException(
-        kind: NetworkFailureKind.connection,
-        message:
-            'Could not connect to the server. Check the server and network.',
-        cause: e,
-      );
+    } on TimeoutException catch (_) {
+      throw NetworkException(NetworkExceptionType.timeout);
+    } on http.ClientException catch (_) {
+      throw NetworkException(NetworkExceptionType.connection);
     }
   }
 
@@ -48,16 +39,11 @@ class JellyfinApiService implements ApiService {
           .sort((a, b) => b.identity.title.compareTo(a.identity.title));
       return ActivityResponse(items: playbackEntries, nextCursor: null);
     } else if (response.statusCode == 404) {
-      throw NotFoundException(
-        'Endpoint not found (404). Check your base URL (and reverse proxy routing if used).',
-        NotFoundService.jellyfin,
-      );
+      throw NotFoundException();
     } else if (response.statusCode == 401) {
-      throw UnauthorizedException(
-        'Unauthorized (401). Check your API key.',
-      );
+      throw UnauthorizedException();
     } else {
-      throw Exception('Failed to load sessions: ${response.statusCode}');
+      throw NetworkException(NetworkExceptionType.unknown);
     }
   }
 }

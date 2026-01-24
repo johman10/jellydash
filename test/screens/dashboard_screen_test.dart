@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/screens/dashboard_screen.dart';
-import 'package:jellydash/services/api_exceptions.dart';
+import 'package:jellydash/services/exceptions.dart';
 import 'package:jellydash/services/jellyfin_api_service.dart';
 import 'package:jellydash/types/activity_response.dart';
 import 'package:jellydash/types/playback_entry.dart';
-import 'package:jellydash/widgets/now_playing.dart';
+import 'package:jellydash/widgets/dashboard_section.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:go_router/go_router.dart';
@@ -150,10 +150,9 @@ void main() {
 
       await tester.pumpWidget(wrapDashboard(mockApiService));
 
-      // Both NowPlaying and RecentActivities show loading indicators initially
       expect(find.byType(CircularProgressIndicator), findsNWidgets(2));
       await tester.pump();
-      expect(find.byType(NowPlaying), findsOneWidget);
+      expect(find.byType(DashboardSection), findsNWidgets(2));
     });
 
     testWidgets('shows updated sessions when they change', (tester) async {
@@ -310,10 +309,7 @@ void main() {
           );
         }
 
-        throw NetworkException(
-          kind: NetworkFailureKind.connection,
-          message: 'Could not connect',
-        );
+        throw NetworkException(NetworkExceptionType.connection);
       });
 
       await tester.pumpWidget(
@@ -333,37 +329,6 @@ void main() {
       expect(find.textContaining('User1'), findsOneWidget);
       // A snackbar should inform the user that refresh failed.
       expect(find.byType(SnackBar), findsOneWidget);
-    });
-
-    testWidgets('shows retry button when initial fetch fails fatally',
-        (tester) async {
-      when(mockApiService.fetchActivity(true, 20, null)).thenThrow(
-        UnauthorizedException('Unauthorized (401). Check your API key.'),
-      );
-
-      await tester.pumpWidget(wrapDashboard(mockApiService));
-      await tester.pumpAndSettle();
-
-      expect(find.text('You shall not pass!'), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
-
-      when(mockApiService.fetchActivity(true, 20, null))
-          .thenAnswer((_) async => ActivityResponse(
-                items: [
-                  baseEntry(
-                    userName: 'User1',
-                    seriesName: 'Show1',
-                    season: 1,
-                    episode: 1,
-                  ),
-                ],
-              ));
-
-      await tester.tap(find.text('Retry'));
-      await tester.pump();
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('User1'), findsOneWidget);
     });
   });
 }

@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
-import 'package:jellydash/services/api_exceptions.dart';
+import 'package:jellydash/services/exceptions.dart';
 import 'package:jellydash/types/playback_entry.dart';
+import 'package:jellydash/widgets/dashboard_section.dart';
 import 'dart:async';
 import '../services/api_service.dart';
-import '../widgets/error_message.dart';
-import '../widgets/now_playing.dart';
-import '../widgets/recent_activities.dart';
 
 class DashboardScreen extends StatefulWidget {
   final ApiService apiService;
@@ -29,10 +27,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<PlaybackEntry> _nowPlayingEntries = [];
   List<PlaybackEntry> _historyEntries = [];
   bool _initialLoading = true;
-  Exception? _initialError;
-  Exception? _refreshError;
-  bool _pollingPaused = false;
-  bool _hasShownStaleToast = false;
+  CustomException? _exception;
+
   Timer? _pollingTimer;
 
   @override
@@ -48,6 +44,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (oldWidget.pollingInterval != widget.pollingInterval ||
         oldWidget.usePluginApi != widget.usePluginApi ||
         oldWidget.apiService != widget.apiService) {
+      setState(() {
+        _exception = null;
+      });
       _startPolling();
     }
   }
@@ -55,34 +54,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _startPolling() async {
     _pollingTimer?.cancel();
 
-    setState(() {
-      _pollingPaused = false;
-      _hasShownStaleToast = false;
-      _initialError = null;
-      _refreshError = null;
-      // Only show a blocking loading state when we don't have any data yet.
-      _initialLoading = _nowPlayingEntries.isEmpty;
-    });
+    if (_exception != null && _exception!.fatal == true) {
+      // TODO: Use better logging
+      print("Fatal exception encountered, interrupt polling");
+      return;
+    }
 
-    _fetchNowPlaying();
+    _fetchActivity();
     _pollingTimer =
         Timer.periodic(Duration(seconds: widget.pollingInterval), (timer) {
-      _fetchNowPlaying();
+      _fetchActivity();
     });
   }
 
-  void _showSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  void _navigateToSettings() {
-    GoRouter.of(context).push('/settings');
-  }
-
-  Future<void> _fetchNowPlaying() async {
+  Future<void> _fetchActivity() async {
     try {
       final data = await widget.apiService.fetchActivity(true, 20, null);
       if (!mounted) return;
@@ -93,59 +78,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _historyEntries =
             data.items.where((entry) => entry.isCompleted == true).toList();
         _initialLoading = false;
-        _initialError = null;
-        _refreshError = null;
-        _pollingPaused = false;
-        _hasShownStaleToast = false;
+        _exception = null;
       });
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
     } catch (error) {
-      final exception =
-          error is Exception ? error : Exception(error.toString());
-      final presentation =
-          presentApiError(exception, usePluginApi: widget.usePluginApi);
-
-      final hadData =
-          _nowPlayingEntries.isNotEmpty || _historyEntries.isNotEmpty;
-      final shouldStopPolling = presentation.isFatal;
-
       if (!mounted) return;
+      if (_exception == null) {
+        _showErrorSnackBar(error as CustomException);
+      }
       setState(() {
         _initialLoading = false;
-        if (hadData) {
-          _refreshError = exception;
-        } else {
-          _initialError = exception;
-        }
-
-        if (shouldStopPolling) {
-          _pollingPaused = true;
-          _pollingTimer?.cancel();
-        }
+        _exception = error as CustomException;
       });
-
-      // When we have older data, keep it visible and show a clear message that
-      // the refresh failed. Avoid spamming repeated snackbars.
-      if (hadData && !_hasShownStaleToast) {
-        if (shouldStopPolling) {
-          _hasShownStaleToast = true;
-          _showSnackBar(
-            '${presentation.shortMessage}. Refresh paused — update Settings and retry.',
-          );
-          return;
-        }
-
-        _hasShownStaleToast = true;
-        _showSnackBar(
-          'Failed to refresh. Showing last known activity.',
-        );
-      }
     }
-  }
-
-  Future<void> _handleRetry() async {
-    await _startPolling();
   }
 
   @override
@@ -154,20 +100,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
+  void _showErrorSnackBar(CustomException error) {
+    var message = "Something went wrong will fetching data.";
+    if (error is NetworkException) {
+      if (error.type == NetworkExceptionType.timeout) {
+        message = "Connection timed out. Please check your server status.";
+      } else if (error.type == NetworkExceptionType.connection) {
+        message = "Could not connect to the server. Check your network.";
+      } else if (error.type == NetworkExceptionType.unknown) {
+        message = "An unknown network error occurred.";
+      }
+    } else if (error is NotFoundException) {
+      if (widget.usePluginApi) {
+        message =
+            "Endpoint not found, check your base URL and whether the plugin API is installed.";
+      } else {
+        message = "Endpoint not found, check your base URL.";
+      }
+    } else if (error is UnauthorizedException) {
+      message = "Your API key seems wrong.";
+    } else {
+      message = "An unknown error occurred: ${error.toString()}";
+    }
+    final snackBar = SnackBar(
+      content: Text(message),
+      duration: const Duration(days: 365),
+      action: SnackBarAction(
+        label: 'Dismiss',
+        onPressed: () {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        },
+      ),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
   @override
   Widget build(BuildContext context) {
     // Enable pull-to-refresh only on mobile platforms (Android/iOS)
     final platform = Theme.of(context).platform;
     final isTouchDevice =
         platform == TargetPlatform.android || platform == TargetPlatform.iOS;
-
-    final showFullError = !_initialLoading &&
-        (_nowPlayingEntries.isEmpty || _historyEntries.isEmpty) &&
-        _initialError != null;
-
-    final showRefreshPausedError = _pollingPaused &&
-        (_nowPlayingEntries.isNotEmpty || _historyEntries.isNotEmpty) &&
-        _refreshError != null;
 
     return AppScaffold(
       title: 'Jellydash',
@@ -180,45 +153,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
         ),
       ],
-      onRefresh: isTouchDevice ? _fetchNowPlaying : null,
+      onRefresh: isTouchDevice ? _fetchActivity : null,
       children: [
-        if (showFullError)
-          ErrorMessage(
-            error: _initialError!,
-            usePluginApi: widget.usePluginApi,
-            onRetry: _pollingPaused ? _handleRetry : null,
-            onGoToSettings: _pollingPaused ? _navigateToSettings : null,
-          )
-        else
-          SizedBox(
-            width: double.infinity,
-            child: Column(
-              spacing: 16,
-              children: [
-                if (showRefreshPausedError)
-                  ErrorMessage(
-                    error: _refreshError!,
-                    usePluginApi: widget.usePluginApi,
-                    onRetry: _handleRetry,
-                    onGoToSettings: _navigateToSettings,
-                  ),
-                NowPlaying(
-                  isLoading: _initialLoading,
-                  nowPlayingEntries: _nowPlayingEntries,
-                  // Do not replace historic data with an error on refresh
-                  // failures. The dashboard will instead show a toast/snackbar.
-                  error: _nowPlayingEntries.isEmpty ? _initialError : null,
-                ),
-                RecentActivities(
-                  isLoading: _initialLoading,
-                  historyEntries: _historyEntries,
-                  // Do not replace historic data with an error on refresh
-                  // failures. The dashboard will instead show a toast/snackbar.
-                  error: _historyEntries.isEmpty ? _initialError : null,
-                ),
-              ],
-            ),
+        SizedBox(
+          width: double.infinity,
+          child: Column(
+            spacing: 16,
+            children: [
+              DashboardSection(
+                isLoading: _initialLoading,
+                entries: _nowPlayingEntries,
+                sectionTitle: "Now Playing",
+                emptyMessage: 'It\'s quiet... too quiet.',
+              ),
+              DashboardSection(
+                isLoading: _initialLoading,
+                entries: _historyEntries,
+                sectionTitle: "Recent Activities",
+                emptyMessage: "History doesn't write itself... go watch!",
+              )
+            ],
           ),
+        ),
       ],
     );
   }

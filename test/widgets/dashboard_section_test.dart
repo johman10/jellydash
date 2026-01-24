@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellydash/types/playback_entry.dart';
-import 'package:jellydash/widgets/now_playing.dart';
+import 'package:jellydash/widgets/dashboard_section.dart';
 import 'package:jellydash/widgets/playback_entry_card.dart';
 
 void main() {
-  group('CurrentActivities layout', () {
+  group('Dashboard section', () {
     Widget wrapWithMaterial(Widget child) {
       return MaterialApp(
         home: Scaffold(
@@ -49,10 +49,23 @@ void main() {
 
     testWidgets('shows message when no sessions', (WidgetTester tester) async {
       await tester.pumpWidget(wrapWithMaterial(
-        const NowPlaying(isLoading: false, nowPlayingEntries: []),
+        const DashboardSection(isLoading: false, entries: [], sectionTitle: "Now playing", emptyMessage: "EmptyMessage",),
       ));
 
-      expect(find.text('It\'s quiet... too quiet.'), findsOneWidget);
+      expect(find.text('EmptyMessage'), findsOneWidget);
+    });
+
+    testWidgets('shows section title', (WidgetTester tester) async {
+      await tester.pumpWidget(wrapWithMaterial(
+        const DashboardSection(
+          isLoading: false,
+          entries: [],
+          sectionTitle: "SectionTitle",
+          emptyMessage: "EmptyMessage",
+        ),
+      ));
+
+      expect(find.text('SectionTitle'), findsOneWidget);
     });
 
     testWidgets('renders one column on narrow width',
@@ -64,7 +77,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(320, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrapWithMaterial(
-        NowPlaying(isLoading: false, nowPlayingEntries: sessions),
+        DashboardSection(isLoading: false, entries: sessions, sectionTitle: "SectionTitle", emptyMessage: "EmptyMessage"),
       ));
 
       await tester.pumpAndSettle();
@@ -96,7 +109,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrapWithMaterial(
-        NowPlaying(isLoading: false, nowPlayingEntries: sessions),
+        DashboardSection(isLoading: false, entries: sessions, sectionTitle: "SectionTitle", emptyMessage: "EmptyMessage"),
       ));
 
       await tester.pumpAndSettle();
@@ -122,7 +135,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1200, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrapWithMaterial(
-        NowPlaying(isLoading: false, nowPlayingEntries: sessions),
+        DashboardSection(isLoading: false, entries: sessions, sectionTitle: "SectionTitle", emptyMessage: "EmptyMessage"),
       ));
 
       await tester.pumpAndSettle();
@@ -149,7 +162,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1200, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrapWithMaterial(
-        NowPlaying(isLoading: false, nowPlayingEntries: sessions),
+        DashboardSection(isLoading: false, entries: sessions, sectionTitle: "SectionTitle", emptyMessage: "EmptyMessage"),
       ));
 
       await tester.pumpAndSettle();
