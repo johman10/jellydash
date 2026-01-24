@@ -8,14 +8,14 @@ class DashboardSection extends StatelessWidget {
   final bool isLoading;
   final List<PlaybackEntry> entries;
   final Exception? error;
-  final String sectionTitle;
+  final String title;
   final String emptyMessage;
 
   const DashboardSection(
       {super.key,
       required this.isLoading,
       required this.entries,
-      required this.sectionTitle,
+      required this.title,
       required this.emptyMessage,
       this.error});
 
@@ -85,7 +85,7 @@ class DashboardSection extends StatelessWidget {
         spacing: 8,
         children: [
           Text(
-            sectionTitle,
+            title,
             style: JellydashTextStyles.sectionTitle,
           ),
           getContent(isLoading, entries, emptyMessage),

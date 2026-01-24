@@ -163,13 +163,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               DashboardSection(
                 isLoading: _initialLoading,
                 entries: _nowPlayingEntries,
-                sectionTitle: "Now Playing",
+                title: "Now Playing",
                 emptyMessage: 'It\'s quiet... too quiet.',
               ),
               DashboardSection(
                 isLoading: _initialLoading,
                 entries: _historyEntries,
-                sectionTitle: "Recent Activities",
+                title: "Recent Activities",
                 emptyMessage: "History doesn't write itself... go watch!",
               )
             ],
