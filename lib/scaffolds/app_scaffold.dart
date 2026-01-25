@@ -5,12 +5,14 @@ class AppScaffold extends StatelessWidget {
   final List<Widget> children;
   final String title;
   final List<Widget>? actions;
+  final Widget? leading;
   final Future<void> Function()? onRefresh;
   const AppScaffold({
     super.key,
     required this.children,
     required this.title,
     this.actions,
+    this.leading,
     this.onRefresh,
   });
 
@@ -50,7 +52,7 @@ class AppScaffold extends StatelessWidget {
                   GoRouter.of(context).pop();
                 },
               )
-            : null,
+            : leading,
         title: Text(title),
         actions: actions,
       ),

@@ -31,9 +31,14 @@ class DashboardSection extends StatelessWidget {
 
     if (entries.isEmpty) {
       return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(emptyMessage),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              emptyMessage,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
       ]);
     }

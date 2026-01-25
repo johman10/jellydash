@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
 import 'package:jellydash/services/settings_holder.dart';
 import '../services/app_settings_service.dart';
+import '../services/snackbar_manager.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AppSettings appSettings;
@@ -49,7 +51,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> handleSavePressed() async {
-    var scaffoldMessenger = ScaffoldMessenger.of(context);
     if (_formKey.currentState!.validate()) {
       final service = AppSettingsService();
 
@@ -70,9 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         settingsNotifier.value = updatedSettings;
       }
 
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Settings saved')),
-      );
+      SnackbarManager.instance.show(context, 'Settings saved');
     }
   }
 
@@ -80,6 +79,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Settings',
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        tooltip: 'Back',
+        onPressed: () {
+          GoRouter.of(context).go('/');
+        },
+      ),
       children: [
         Form(
           key: _formKey,

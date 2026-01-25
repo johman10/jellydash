@@ -1,7 +1,10 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
 import 'package:jellydash/services/exceptions.dart';
+import 'package:jellydash/services/snackbar_manager.dart';
 import 'package:jellydash/types/playback_entry.dart';
 import 'package:jellydash/widgets/dashboard_section.dart';
 import 'dart:async';
@@ -54,12 +57,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _startPolling() async {
     _pollingTimer?.cancel();
 
-    if (_exception != null && _exception!.fatal == true) {
-      // TODO: Use better logging
-      print("Fatal exception encountered, interrupt polling");
-      return;
-    }
-
     _fetchActivity();
     _pollingTimer =
         Timer.periodic(Duration(seconds: widget.pollingInterval), (timer) {
@@ -69,8 +66,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchActivity() async {
     try {
+      if (_exception != null && _exception!.fatal == true) {
+        _pollingTimer?.cancel();
+        log("Fatal exception encountered, interrupt polling");
+        return;
+      }
+
       final data = await widget.apiService.fetchActivity(true, 20, null);
-      if (!mounted) return;
+
+      if (mounted) {
+        SnackbarManager.instance.dismiss(context);
+      }
 
       setState(() {
         _nowPlayingEntries =
@@ -80,13 +86,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _initialLoading = false;
         _exception = null;
       });
-
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
     } catch (error) {
-      if (!mounted) return;
       if (_exception == null) {
         _showErrorSnackBar(error as CustomException);
       }
+
       setState(() {
         _initialLoading = false;
         _exception = error as CustomException;
@@ -98,6 +102,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _pollingTimer?.cancel();
     super.dispose();
+  }
+
+  String get historyEmptyMessage {
+    if (widget.usePluginApi) {
+      return "History doesn't write itself! Go watch!";
+    } else {
+      return "No recent activities. Enable the Jellydash plugin API for more detailed history.";
+    }
   }
 
   void _showErrorSnackBar(CustomException error) {
@@ -122,17 +134,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else {
       message = "An unknown error occurred: ${error.toString()}";
     }
-    final snackBar = SnackBar(
-      content: Text(message),
-      duration: const Duration(days: 365),
-      action: SnackBarAction(
-        label: 'Dismiss',
-        onPressed: () {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        },
-      ),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    SnackbarManager.instance.show(context, message, duration: Duration(days: 365), action: SnackBarAction(
+      label: 'Dismiss',
+      onPressed: () {
+        SnackbarManager.instance.dismiss(context);
+      },
+    ));
   }
 
   @override
@@ -170,7 +177,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 isLoading: _initialLoading,
                 entries: _historyEntries,
                 title: "Recent Activities",
-                emptyMessage: "History doesn't write itself... go watch!",
+                emptyMessage: historyEmptyMessage,
               )
             ],
           ),
