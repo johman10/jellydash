@@ -19,7 +19,8 @@ class DashboardSection extends StatelessWidget {
       required this.emptyMessage,
       this.error});
 
-  Widget getContent(bool isLoading, List<PlaybackEntry> entries, String emptyMessage) {
+  Widget getContent(
+      bool isLoading, List<PlaybackEntry> entries, String emptyMessage) {
     if (isLoading) {
       return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Padding(

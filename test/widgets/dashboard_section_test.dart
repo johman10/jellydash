@@ -49,7 +49,12 @@ void main() {
 
     testWidgets('shows message when no sessions', (WidgetTester tester) async {
       await tester.pumpWidget(wrapWithMaterial(
-        const DashboardSection(isLoading: false, entries: [], title: "Now playing", emptyMessage: "EmptyMessage",),
+        const DashboardSection(
+          isLoading: false,
+          entries: [],
+          title: "Now playing",
+          emptyMessage: "EmptyMessage",
+        ),
       ));
 
       expect(find.text('EmptyMessage'), findsOneWidget);
@@ -77,7 +82,11 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(320, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrapWithMaterial(
-        DashboardSection(isLoading: false, entries: sessions, title: "SectionTitle", emptyMessage: "EmptyMessage"),
+        DashboardSection(
+            isLoading: false,
+            entries: sessions,
+            title: "SectionTitle",
+            emptyMessage: "EmptyMessage"),
       ));
 
       await tester.pumpAndSettle();
@@ -109,7 +118,11 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrapWithMaterial(
-        DashboardSection(isLoading: false, entries: sessions, title: "SectionTitle", emptyMessage: "EmptyMessage"),
+        DashboardSection(
+            isLoading: false,
+            entries: sessions,
+            title: "SectionTitle",
+            emptyMessage: "EmptyMessage"),
       ));
 
       await tester.pumpAndSettle();
@@ -135,7 +148,11 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1200, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrapWithMaterial(
-        DashboardSection(isLoading: false, entries: sessions, title: "SectionTitle", emptyMessage: "EmptyMessage"),
+        DashboardSection(
+            isLoading: false,
+            entries: sessions,
+            title: "SectionTitle",
+            emptyMessage: "EmptyMessage"),
       ));
 
       await tester.pumpAndSettle();
@@ -162,7 +179,11 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1200, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(wrapWithMaterial(
-        DashboardSection(isLoading: false, entries: sessions, title: "SectionTitle", emptyMessage: "EmptyMessage"),
+        DashboardSection(
+            isLoading: false,
+            entries: sessions,
+            title: "SectionTitle",
+            emptyMessage: "EmptyMessage"),
       ));
 
       await tester.pumpAndSettle();

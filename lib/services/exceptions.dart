@@ -2,11 +2,7 @@ class CustomException implements Exception {
   final bool fatal = false;
 }
 
-enum NetworkExceptionType {
-  timeout,
-  connection,
-  unknown
-}
+enum NetworkExceptionType { timeout, connection, unknown }
 
 class NetworkException implements CustomException {
   final NetworkExceptionType type;

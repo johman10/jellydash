@@ -16,7 +16,8 @@ class SnackbarManager {
   /// If a (persistent) snackbar is already visible, it will be dismissed first.
   /// [duration] specifies how long the snackbar should be visible, for persistent snackbar use Duration(days: 365).
   /// [action] can be provided to add an action button to the snackbar.
-  void show(BuildContext context, String message, {Duration duration = defaultDuration, SnackBarAction? action}) {
+  void show(BuildContext context, String message,
+      {Duration duration = defaultDuration, SnackBarAction? action}) {
     // Dismiss previous snackbar(s) if it's still visible
     dismiss(context);
 
@@ -25,12 +26,11 @@ class SnackbarManager {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-        width: snackbarWidth,
-        action: action
-      ),
+          content: Text(message),
+          duration: duration,
+          behavior: SnackBarBehavior.floating,
+          width: snackbarWidth,
+          action: action),
     );
 
     _currentSnackbarDuration = duration;

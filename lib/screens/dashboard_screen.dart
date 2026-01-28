@@ -132,12 +132,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else if (error is UnauthorizedException) {
       message = "Your API key seems wrong.";
     }
-    SnackbarManager.instance.show(context, message, duration: Duration(days: 365), action: SnackBarAction(
-      label: 'Dismiss',
-      onPressed: () {
-        SnackbarManager.instance.dismiss(context);
-      },
-    ));
+    SnackbarManager.instance.show(context, message,
+        duration: Duration(days: 365),
+        action: SnackBarAction(
+          label: 'Dismiss',
+          onPressed: () {
+            SnackbarManager.instance.dismiss(context);
+          },
+        ));
   }
 
   @override

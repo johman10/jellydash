@@ -38,7 +38,8 @@ class ContentIdentity {
     final primaryImagePath = json['primary_image_path'] as String?;
 
     return ContentIdentity(
-      primaryImageUrl: primaryImagePath != null ? '$baseUrl$primaryImagePath' : null,
+      primaryImageUrl:
+          primaryImagePath != null ? '$baseUrl$primaryImagePath' : null,
       title: json['title'] as String? ?? '',
       genres: (json['genres'] as List<dynamic>?)
               ?.map((e) => e.toString())
@@ -119,7 +120,9 @@ class UserInfo {
     return UserInfo(
       userId: userId ?? '',
       userName: json['UserName'] as String? ?? '',
-      userImageUrl: userId != null && userPrimaryImageTag != null && userPrimaryImageTag.isNotEmpty
+      userImageUrl: userId != null &&
+              userPrimaryImageTag != null &&
+              userPrimaryImageTag.isNotEmpty
           ? '$baseUrl/Users/$userId/Images/Primary?tag=$userPrimaryImageTag'
           : null,
     );
@@ -197,7 +200,8 @@ class TimingInfo {
 
     double? endPercentage;
     if (runTimeTicks != null && positionTicks != null && runTimeTicks > 0) {
-      endPercentage = (positionTicks.toDouble() / runTimeTicks.toDouble()) * 100;
+      endPercentage =
+          (positionTicks.toDouble() / runTimeTicks.toDouble()) * 100;
     }
 
     return TimingInfo(
@@ -310,7 +314,8 @@ class AudioTrack {
   }
 
   factory AudioTrack.fromSessionJson(Map<String, dynamic> json) {
-    final mediaStreams = (json['NowPlayingItem'] as Map<String, dynamic>?)?['MediaStreams'] as List<dynamic>?;
+    final mediaStreams = (json['NowPlayingItem']
+        as Map<String, dynamic>?)?['MediaStreams'] as List<dynamic>?;
     final playState = json['PlayState'] as Map<String, dynamic>?;
     final audioStreamIndex = playState?['AudioStreamIndex'];
     final transcodingInfo = json['TranscodingInfo'] as Map<String, dynamic>?;
@@ -320,7 +325,8 @@ class AudioTrack {
     if (mediaStreams != null && audioStreamIndex != null) {
       for (final stream in mediaStreams) {
         final streamMap = stream as Map<String, dynamic>;
-        if (streamMap['Type'] == 'Audio' && streamMap['Index'] == audioStreamIndex) {
+        if (streamMap['Type'] == 'Audio' &&
+            streamMap['Index'] == audioStreamIndex) {
           audioStream = streamMap;
           break;
         }
@@ -375,7 +381,8 @@ class SubtitleTrack {
   }
 
   factory SubtitleTrack.fromSessionJson(Map<String, dynamic> json) {
-    final mediaStreams = (json['NowPlayingItem'] as Map<String, dynamic>?)?['MediaStreams'] as List<dynamic>?;
+    final mediaStreams = (json['NowPlayingItem']
+        as Map<String, dynamic>?)?['MediaStreams'] as List<dynamic>?;
     final playState = json['PlayState'] as Map<String, dynamic>?;
     final subtitleStreamIndex = playState?['SubtitleStreamIndex'];
 
@@ -383,7 +390,8 @@ class SubtitleTrack {
     if (mediaStreams != null && subtitleStreamIndex != null) {
       for (final stream in mediaStreams) {
         final streamMap = stream as Map<String, dynamic>;
-        if (streamMap['Type'] == 'Subtitle' && streamMap['Index'] == subtitleStreamIndex) {
+        if (streamMap['Type'] == 'Subtitle' &&
+            streamMap['Index'] == subtitleStreamIndex) {
           return SubtitleTrack(
             isForced: streamMap['IsForced'] as bool? ?? false,
             isHearingImpaired: streamMap['IsHearingImpaired'] as bool? ?? false,
@@ -420,7 +428,8 @@ class StreamInfo {
     return StreamInfo(
       video: videoJson != null ? VideoTrack.fromJson(videoJson) : null,
       audio: audioJson != null ? AudioTrack.fromJson(audioJson) : null,
-      subtitle: subtitleJson != null ? SubtitleTrack.fromJson(subtitleJson) : null,
+      subtitle:
+          subtitleJson != null ? SubtitleTrack.fromJson(subtitleJson) : null,
     );
   }
 
@@ -461,16 +470,22 @@ class TranscodingInfo {
       this.completionPercentage});
 
   factory TranscodingInfo.fromJson(Map<String, dynamic> json) {
-    final transcodedVideoJson = json['transcoded_video'] as Map<String, dynamic>?;
-    final transcodedAudioJson = json['transcoded_audio'] as Map<String, dynamic>?;
+    final transcodedVideoJson =
+        json['transcoded_video'] as Map<String, dynamic>?;
+    final transcodedAudioJson =
+        json['transcoded_audio'] as Map<String, dynamic>?;
 
     return TranscodingInfo(
       isVideoDirect: json['is_video_direct'] as bool? ?? false,
       isAudioDirect: json['is_audio_direct'] as bool? ?? false,
       hardwareAcceleration: json['hardware_acceleration'] as String?,
       bitrate: json['bitrate'] as int?,
-      transcodedVideo: transcodedVideoJson != null ? VideoTrack.fromJson(transcodedVideoJson) : null,
-      transcodedAudio: transcodedAudioJson != null ? AudioTrack.fromJson(transcodedAudioJson) : null,
+      transcodedVideo: transcodedVideoJson != null
+          ? VideoTrack.fromJson(transcodedVideoJson)
+          : null,
+      transcodedAudio: transcodedAudioJson != null
+          ? AudioTrack.fromJson(transcodedAudioJson)
+          : null,
       reasons: (json['reasons'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
@@ -574,7 +589,8 @@ class PlaybackEntry {
     final nowPlayingItem = json['NowPlayingItem'] as Map<String, dynamic>?;
     final playState = json['PlayState'] as Map<String, dynamic>?;
     final transcodingInfo = json['TranscodingInfo'] as Map<String, dynamic>?;
-    final contentType = ContentType.fromApiKind(nowPlayingItem?['Type'] as String?);
+    final contentType =
+        ContentType.fromApiKind(nowPlayingItem?['Type'] as String?);
 
     return PlaybackEntry(
       itemId: nowPlayingItem?['Id']?.toString() ?? '',
