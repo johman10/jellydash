@@ -113,7 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showErrorSnackBar(CustomException error) {
-    var message = "Something went wrong will fetching data.";
+    var message = "An unknown error occurred: ${error.toString()}";
     if (error is NetworkException) {
       if (error.type == NetworkExceptionType.timeout) {
         message = "Connection timed out. Please check your server status.";
@@ -131,8 +131,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } else if (error is UnauthorizedException) {
       message = "Your API key seems wrong.";
-    } else {
-      message = "An unknown error occurred: ${error.toString()}";
     }
     SnackbarManager.instance.show(context, message, duration: Duration(days: 365), action: SnackBarAction(
       label: 'Dismiss',
