@@ -6,6 +6,15 @@
     "description": "Activity tracking and dashboard plugin for Jellyfin",
     "owner": "johman10",
     "overview": "Jellydash provides real-time activity tracking and a dashboard view for your Jellyfin server. Monitor current playback sessions, view recent activity, and get insights into media usage.",
-    "versions": []
+    "versions": [
+      {
+        "version": "0.0.1",
+        "changelog": "## What's Changed\n* Add release pipeline by @johman10 in https://github.com/johman10/jellydash/pull/12\n* Add app integration with Jellydash plugin by @johman10 in https://github.com/johman10/jellydash/pull/11\n* Fix: Release pipeline by @johman10 in https://github.com/johman10/jellydash/pull/13\n* Fix: release pipeline by @johman10 in https://github.com/johman10/jellydash/pull/14\n* Fix: Release pipeline - detached head by @johman10 in https://github.com/johman10/jellydash/pull/15\n\n\n**Full Changelog**: https://github.com/johman10/jellydash/commits/v0.0.1",
+        "targetAbi": "10.11.5",
+        "sourceUrl": "https://github.com/johman10/jellydash/releases/download/v0.0.1/jellydash-plugin-0.0.1.zip",
+        "checksum": "96cc7f4e03f638ca102c2b173713c3b6",
+        "timestamp": "2026-01-31 09:17:29"
+      }
+    ]
   }
 ]
