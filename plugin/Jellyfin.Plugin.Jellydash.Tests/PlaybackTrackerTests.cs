@@ -2,6 +2,7 @@ using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Jellydash.Events;
 using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
+using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -48,13 +49,13 @@ public sealed class PlaybackTrackerTests
         var startArgs = CreatePlaybackStartEventArgs(userId, itemId, BaseItemKind.Movie, 10_000_000L, 0L);
         await logger.OnEvent(startArgs);
 
-        var startEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(startArgs), CancellationToken.None);
+        var startEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(startArgs.Session.Id, startArgs.Session.PlaylistItemId, startArgs.MediaInfo.Id), CancellationToken.None);
         Assert.NotNull(startEntry);
 
         var stopArgs = CreatePlaybackStopEventArgs(userId, itemId, BaseItemKind.Movie, 10_000_000L, 5_000_000L, startArgs.Session.Id, startArgs.Session.PlaylistItemId);
         await logger.OnEvent(stopArgs);
 
-        var entry = await repo.GetRecentlyCompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(stopArgs), CancellationToken.None);
+        var entry = await repo.GetRecentlyCompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(stopArgs.Session.Id, stopArgs.Session.PlaylistItemId, stopArgs.MediaInfo.Id), CancellationToken.None);
         Assert.NotNull(entry);
 
         Assert.Equal(userId, entry.UserId);
@@ -74,7 +75,7 @@ public sealed class PlaybackTrackerTests
         var stopArgs = CreatePlaybackStopEventArgs(userId, itemId, BaseItemKind.Movie, 10_000_000L, 2_500_000L, Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
         await logger.OnEvent(stopArgs);
 
-        var entry = await repo.GetRecentlyCompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(stopArgs), CancellationToken.None);
+        var entry = await repo.GetRecentlyCompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(stopArgs.Session.Id, stopArgs.Session.PlaylistItemId, stopArgs.MediaInfo.Id), CancellationToken.None);
         Assert.NotNull(entry);
 
         Assert.Equal(userId, entry.UserId);
@@ -97,8 +98,38 @@ public sealed class PlaybackTrackerTests
         var stopArgs = CreatePlaybackStopEventArgs(userId, itemId, BaseItemKind.Audio, 10_000_000L, 5_000_000L, startArgs.Session.Id, startArgs.Session.PlaylistItemId);
         await logger.OnEvent(stopArgs);
 
-        var entry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(stopArgs), CancellationToken.None);
+        var entry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(PlaybackEntry.GeneratePlaybackId(stopArgs.Session.Id, stopArgs.Session.PlaylistItemId, stopArgs.MediaInfo.Id), CancellationToken.None);
         Assert.Null(entry);
+    }
+
+    [Fact]
+    public async Task OnEvent_SessionEnded_FinalizesIncompleteEntry()
+    {
+        var repo = await CreateRepositoryAsync();
+        var tracker = CreateTracker();
+
+        var userId = Guid.NewGuid();
+        var itemId = Guid.NewGuid();
+
+        var startArgs = CreatePlaybackStartEventArgs(userId, itemId, BaseItemKind.Movie, 10_000_000L, 0L);
+        await tracker.OnEvent(startArgs);
+
+        var playbackId = PlaybackEntry.GeneratePlaybackId(startArgs.Session.Id, startArgs.Session.PlaylistItemId, startArgs.MediaInfo.Id);
+        var startEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, CancellationToken.None);
+        Assert.NotNull(startEntry);
+
+        // Simulate a session ending without a PlaybackStop event.
+        startArgs.Session.UserId = userId;
+        startArgs.Session.NowPlayingItem = startArgs.MediaInfo;
+        startArgs.Session.PlayState.PositionTicks = 5_000_000L;
+
+        var endedArgs = new SessionEndedEventArgs(startArgs.Session);
+        await tracker.OnEvent(endedArgs);
+
+        var completed = await repo.GetRecentlyCompletedByPlaybackIdAsync(playbackId, CancellationToken.None);
+        Assert.NotNull(completed);
+        Assert.True(completed.IsCompleted);
+        Assert.NotNull(completed.EndUtc);
     }
 
     private static PlaybackStartEventArgs CreatePlaybackStartEventArgs(Guid userId, Guid itemId, BaseItemKind kind, long runtimeTicks, long startPositionTicks)

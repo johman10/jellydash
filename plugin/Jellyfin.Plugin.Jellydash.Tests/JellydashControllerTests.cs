@@ -31,7 +31,7 @@ public sealed class JellydashControllerTests
         var repo = await CreateRepositoryAsync();
         var controller = new JellydashController(repo);
 
-        var result = await controller.GetActivity(null, "not-a-valid-cursor", CancellationToken.None);
+        var result = await controller.GetActivity(null, "not-a-valid-cursor", false, CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Invalid cursor.", badRequest.Value);
@@ -52,7 +52,7 @@ public sealed class JellydashControllerTests
             {
                 PlaybackId = Guid.NewGuid(),
                 ItemId = Guid.NewGuid(),
-                ContentKind = ContentKind.Movie,
+                ContentType = ContentType.Movie,
                 Title = $"Item-{i}",
                 UserId = Guid.NewGuid(),
                 UserName = "User",
@@ -68,13 +68,14 @@ public sealed class JellydashControllerTests
 
         var controller = new JellydashController(repo);
 
-        var result = await controller.GetActivity(null, null, CancellationToken.None);
+        var result = await controller.GetActivity(null, null, false, CancellationToken.None);
 
-        var ok = Assert.IsType<OkObjectResult>(result);
-        var items = GetItems(ok);
-        var nextCursor = GetNextCursor(ok);
+        var json = Assert.IsType<JsonResult>(result);
+        var items = GetItems(json);
+        var nextCursor = GetNextCursor(json);
 
         Assert.Equal(20, items.Count);
+        Assert.All(items, item => Assert.True(item.IsCompleted));
         var orderedByEnd = items.OrderByDescending(e => e.Timing.EndUtc).ToList();
         Assert.True(items.Select(i => i.Timing.EndUtc).SequenceEqual(orderedByEnd.Select(i => i.Timing.EndUtc)));
         Assert.False(string.IsNullOrEmpty(nextCursor));
@@ -94,7 +95,7 @@ public sealed class JellydashControllerTests
             {
                 PlaybackId = Guid.NewGuid(),
                 ItemId = Guid.NewGuid(),
-                ContentKind = ContentKind.Movie,
+                ContentType = ContentType.Movie,
                 Title = $"Item-{i}",
                 UserId = Guid.NewGuid(),
                 UserName = "User",
@@ -111,21 +112,23 @@ public sealed class JellydashControllerTests
         var controller = new JellydashController(repo);
 
         // First page with explicit small limit.
-        var firstResult = await controller.GetActivity(2, null, CancellationToken.None);
-        var firstOk = Assert.IsType<OkObjectResult>(firstResult);
-        var firstItems = GetItems(firstOk);
-        var firstCursor = GetNextCursor(firstOk);
+        var firstResult = await controller.GetActivity(2, null, false, CancellationToken.None);
+        var firstJson = Assert.IsType<JsonResult>(firstResult);
+        var firstItems = GetItems(firstJson);
+        var firstCursor = GetNextCursor(firstJson);
 
         Assert.Equal(2, firstItems.Count);
+        Assert.All(firstItems, item => Assert.True(item.IsCompleted));
         Assert.NotNull(firstCursor);
 
         // Second page using cursor.
-        var secondResult = await controller.GetActivity(2, firstCursor, CancellationToken.None);
-        var secondOk = Assert.IsType<OkObjectResult>(secondResult);
-        var secondItems = GetItems(secondOk);
-        var secondCursor = GetNextCursor(secondOk);
+        var secondResult = await controller.GetActivity(2, firstCursor, false, CancellationToken.None);
+        var secondJson = Assert.IsType<JsonResult>(secondResult);
+        var secondItems = GetItems(secondJson);
+        var secondCursor = GetNextCursor(secondJson);
 
         Assert.Equal(2, secondItems.Count);
+        Assert.All(secondItems, item => Assert.True(item.IsCompleted));
         Assert.NotNull(secondCursor);
         Assert.NotEqual(firstCursor, secondCursor);
 
@@ -138,21 +141,99 @@ public sealed class JellydashControllerTests
         Assert.False(string.IsNullOrEmpty(secondCursor));
     }
 
-    private static List<PlaybackEntryDto> GetItems(OkObjectResult ok)
+    [Fact]
+    public async Task GetActivity_IncludeActive_ReturnsBothActiveAndCompleted()
     {
-        var value = ok.Value ?? throw new InvalidOperationException("Result value is null.");
-        var itemsProperty = value.GetType().GetProperty("items");
-        Assert.NotNull(itemsProperty);
-        var itemsObj = itemsProperty!.GetValue(value);
-        var itemsEnumerable = Assert.IsAssignableFrom<IEnumerable<PlaybackEntryDto>>(itemsObj);
-        return itemsEnumerable.ToList();
+        var repo = await CreateRepositoryAsync();
+        var now = DateTime.UtcNow;
+
+        // Insert 3 completed entries.
+        for (int i = 0; i < 3; i++)
+        {
+            var endUtc = now.AddMinutes(-10 - i);
+            var startUtc = endUtc.AddMinutes(-10);
+            var entry = new PlaybackEntry
+            {
+                PlaybackId = Guid.NewGuid(),
+                ItemId = Guid.NewGuid(),
+                ContentType = ContentType.Movie,
+                Title = $"Completed-{i}",
+                UserId = Guid.NewGuid(),
+                UserName = "User",
+                ClientName = "TestClient",
+                DeviceName = "TestDevice",
+                StartUtc = startUtc,
+                EndUtc = endUtc,
+                IsCompleted = true
+            };
+
+            await repo.AppendAsync(entry, CancellationToken.None);
+        }
+
+        // Insert 2 active (incomplete) entries.
+        for (int i = 0; i < 2; i++)
+        {
+            var startUtc = now.AddMinutes(-5 - i);
+            var entry = new PlaybackEntry
+            {
+                PlaybackId = Guid.NewGuid(),
+                ItemId = Guid.NewGuid(),
+                ContentType = ContentType.Episode,
+                Title = $"Active-{i}",
+                UserId = Guid.NewGuid(),
+                UserName = "User",
+                ClientName = "TestClient",
+                DeviceName = "TestDevice",
+                StartUtc = startUtc,
+                EndUtc = null,
+                IsCompleted = false
+            };
+
+            await repo.AppendAsync(entry, CancellationToken.None);
+        }
+
+        var controller = new JellydashController(repo);
+
+        // Call GetActivity with includeActive=true.
+        var result = await controller.GetActivity(10, null, true, CancellationToken.None);
+
+        var json = Assert.IsType<JsonResult>(result);
+        var items = GetItems(json);
+
+        Assert.Equal(5, items.Count);
+
+        var activeItems = items.Where(i => !i.IsCompleted).ToList();
+        var completedItems = items.Where(i => i.IsCompleted).ToList();
+
+        Assert.Equal(2, activeItems.Count);
+        Assert.Equal(3, completedItems.Count);
+
+        // Verify active items have no EndUtc.
+        Assert.All(activeItems, item => Assert.Null(item.Timing.EndUtc));
+
+        // Verify completed items have EndUtc.
+        Assert.All(completedItems, item => Assert.NotNull(item.Timing.EndUtc));
+
+        // Verify overall ordering: items should be sorted by most recent activity.
+        // Active items (by StartUtc) should appear before older completed items.
+        var activeStartTimes = activeItems.Select(i => i.Timing.StartUtc).ToList();
+        var completedEndTimes = completedItems.Select(i => i.Timing.EndUtc!.Value).ToList();
+
+        Assert.True(activeStartTimes.SequenceEqual(activeStartTimes.OrderByDescending(t => t)));
+        Assert.True(completedEndTimes.SequenceEqual(completedEndTimes.OrderByDescending(t => t)));
     }
 
-    private static string? GetNextCursor(OkObjectResult ok)
+    private static List<PlaybackEntryDto> GetItems(JsonResult json)
     {
-        var value = ok.Value ?? throw new InvalidOperationException("Result value is null.");
-        var cursorProperty = value.GetType().GetProperty("nextCursor");
-        Assert.NotNull(cursorProperty);
-        return (string?)cursorProperty!.GetValue(value);
+        var value = json.Value ?? throw new InvalidOperationException("Result value is null.");
+        var response = Assert.IsType<ActivityResponse>(value);
+        return response.Items.ToList();
+    }
+
+    private static string? GetNextCursor(JsonResult json)
+    {
+        var value = json.Value ?? throw new InvalidOperationException("Result value is null.");
+        var response = Assert.IsType<ActivityResponse>(value);
+        return response.NextCursor;
     }
 }

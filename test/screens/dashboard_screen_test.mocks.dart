@@ -3,12 +3,12 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i4;
+import 'dart:async' as _i5;
 
-import 'package:jellydash/services/jellyfin_api_service.dart' as _i2;
-import 'package:jellydash/types/session.dart' as _i5;
+import 'package:jellydash/services/jellyfin_api_service.dart' as _i3;
+import 'package:jellydash/types/activity_response.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i3;
+import 'package:mockito/src/dummies.dart' as _i4;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -25,11 +25,22 @@ import 'package:mockito/src/dummies.dart' as _i3;
 // ignore_for_file: subtype_of_sealed_class
 // ignore_for_file: invalid_use_of_internal_member
 
+class _FakeActivityResponse_0 extends _i1.SmartFake
+    implements _i2.ActivityResponse {
+  _FakeActivityResponse_0(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
 /// A class which mocks [JellyfinApiService].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockJellyfinApiService extends _i1.Mock
-    implements _i2.JellyfinApiService {
+    implements _i3.JellyfinApiService {
   MockJellyfinApiService() {
     _i1.throwOnMissingStub(this);
   }
@@ -37,7 +48,7 @@ class MockJellyfinApiService extends _i1.Mock
   @override
   String get baseUrl => (super.noSuchMethod(
         Invocation.getter(#baseUrl),
-        returnValue: _i3.dummyValue<String>(
+        returnValue: _i4.dummyValue<String>(
           this,
           Invocation.getter(#baseUrl),
         ),
@@ -46,18 +57,38 @@ class MockJellyfinApiService extends _i1.Mock
   @override
   String get apiKey => (super.noSuchMethod(
         Invocation.getter(#apiKey),
-        returnValue: _i3.dummyValue<String>(
+        returnValue: _i4.dummyValue<String>(
           this,
           Invocation.getter(#apiKey),
         ),
       ) as String);
 
   @override
-  _i4.Future<List<_i5.Session>> fetchCurrentSessions() => (super.noSuchMethod(
+  _i5.Future<_i2.ActivityResponse> fetchActivity(
+    bool? includeActive,
+    int? limit,
+    String? cursor,
+  ) =>
+      (super.noSuchMethod(
         Invocation.method(
-          #fetchCurrentSessions,
-          [],
+          #fetchActivity,
+          [
+            includeActive,
+            limit,
+            cursor,
+          ],
         ),
-        returnValue: _i4.Future<List<_i5.Session>>.value(<_i5.Session>[]),
-      ) as _i4.Future<List<_i5.Session>>);
+        returnValue:
+            _i5.Future<_i2.ActivityResponse>.value(_FakeActivityResponse_0(
+          this,
+          Invocation.method(
+            #fetchActivity,
+            [
+              includeActive,
+              limit,
+              cursor,
+            ],
+          ),
+        )),
+      ) as _i5.Future<_i2.ActivityResponse>);
 }

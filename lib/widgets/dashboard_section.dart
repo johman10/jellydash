@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
-import '../types/session.dart';
-import './current_activity_card.dart';
+import 'package:jellydash/types/playback_entry.dart';
+import 'playback_entry_card.dart';
 
-class CurrentActivities extends StatelessWidget {
+class DashboardSection extends StatelessWidget {
   final bool isLoading;
-  final List<Session> sessions;
+  final List<PlaybackEntry> entries;
+  final Exception? error;
+  final String title;
+  final String emptyMessage;
 
-  const CurrentActivities(
-      {super.key, required this.isLoading, required this.sessions});
+  const DashboardSection(
+      {super.key,
+      required this.isLoading,
+      required this.entries,
+      required this.title,
+      required this.emptyMessage,
+      this.error});
 
-  Widget getContent(bool isLoading, List<Session> sessions) {
+  Widget getContent(
+      bool isLoading, List<PlaybackEntry> entries, String emptyMessage) {
     if (isLoading) {
       return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Padding(
@@ -21,18 +30,22 @@ class CurrentActivities extends StatelessWidget {
       ]);
     }
 
-    if (sessions.isEmpty) {
-      return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('It\'s quiet... too quiet.'),
+    if (entries.isEmpty) {
+      return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              emptyMessage,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
       ]);
     }
 
     const spacing = 16.0;
     const minCardWidth = (AppScaffold.maxContentWidth / 3) - (spacing * 2);
-
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -58,10 +71,10 @@ class CurrentActivities extends StatelessWidget {
         return Wrap(
           spacing: spacing, // space between columns only
           // runSpacing: spacing,
-          children: sessions.map((session) {
+          children: entries.map((entry) {
             return SizedBox(
               width: cardWidth,
-              child: CurrentActivityCard(session: session),
+              child: PlaybackEntryCard(entry: entry),
             );
           }).toList(),
         );
@@ -77,11 +90,11 @@ class CurrentActivities extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 8,
         children: [
-          const Text(
-            'Now Playing',
+          Text(
+            title,
             style: JellydashTextStyles.sectionTitle,
           ),
-          getContent(isLoading, sessions),
+          getContent(isLoading, entries, emptyMessage),
         ],
       ),
     );

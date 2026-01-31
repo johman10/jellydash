@@ -2,25 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jellydash/screens/dashboard_screen.dart';
-import 'package:jellydash/services/jellyfin_api_service.dart';
+import 'package:jellydash/services/api_service.dart';
+import 'package:jellydash/services/settings_holder.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
 import 'screens/settings_screen.dart';
 import 'services/app_settings_service.dart';
 
 final appSettingsService = AppSettingsService();
-
-class SettingsHolder extends InheritedWidget {
-  final AppSettings settings;
-  const SettingsHolder(
-      {required this.settings, required super.child, super.key});
-
-  static AppSettings of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<SettingsHolder>()!.settings;
-
-  @override
-  bool updateShouldNotify(covariant SettingsHolder oldWidget) =>
-      settings != oldWidget.settings;
-}
 
 Future<void> main() async {
   GoRouter.optionURLReflectsImperativeAPIs = true;
@@ -31,14 +19,16 @@ Future<void> main() async {
   await appSettingsService.init();
   final settings = await appSettingsService.loadSettings();
 
-  runApp(JellydashApp(settings: settings));
+  final settingsNotifier = ValueNotifier<AppSettings>(settings);
+
+  runApp(JellydashApp(settingsNotifier: settingsNotifier));
 }
 
 // GoRouter is now created inside JellydashApp with settings
 
 class JellydashApp extends StatelessWidget {
-  final AppSettings settings;
-  const JellydashApp({super.key, required this.settings});
+  final ValueNotifier<AppSettings> settingsNotifier;
+  const JellydashApp({super.key, required this.settingsNotifier});
 
   @override
   Widget build(BuildContext context) {
@@ -50,10 +40,12 @@ class JellydashApp extends StatelessWidget {
           builder: (BuildContext context, GoRouterState state) {
             final appSettings = SettingsHolder.of(context);
             return DashboardScreen(
-              apiService: JellyfinApiService(
+              apiService: ApiService.create(
                 baseUrl: appSettings.jellyfinBaseUrl,
                 apiKey: appSettings.jellyfinApiKey,
+                usePluginApi: appSettings.usePluginApi,
               ),
+              usePluginApi: appSettings.usePluginApi,
               pollingInterval: appSettings.pollingInterval,
             );
           },
@@ -69,7 +61,7 @@ class JellydashApp extends StatelessWidget {
       ],
     );
     return SettingsHolder(
-      settings: settings,
+      notifier: settingsNotifier,
       child: MaterialApp.router(
         title: 'Jellydash',
         theme: ThemeData(

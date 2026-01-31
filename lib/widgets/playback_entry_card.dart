@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jellydash/theme/jellydash_theme.dart';
-import '../types/session.dart';
+import 'package:jellydash/types/playback_entry.dart';
 
 const posterHeight = 75.0;
 const posterWidth = 50.0;
@@ -208,8 +208,7 @@ class SessionPoster extends StatelessWidget {
                     if (loadingProgress == null) return child;
                     return posterFallback;
                   },
-                  errorBuilder: (context, error, stackTrace) =>
-                      posterFallback,
+                  errorBuilder: (context, error, stackTrace) => posterFallback,
                 )
               : posterFallback,
           if (isPaused)
@@ -233,9 +232,9 @@ class SessionPoster extends StatelessWidget {
   }
 }
 
-class CurrentActivityCard extends StatelessWidget {
-  final Session session;
-  const CurrentActivityCard({super.key, required this.session});
+class PlaybackEntryCard extends StatelessWidget {
+  final PlaybackEntry entry;
+  const PlaybackEntryCard({super.key, required this.entry});
 
   String? formatBitrate(int bps) {
     if (bps <= 0) return null;
@@ -251,64 +250,34 @@ class CurrentActivityCard extends StatelessWidget {
   }
 
   String get subtitle {
-    final season = session.season ?? 0;
-    final episode = session.episode ?? 0;
+    final season = entry.identity.seasonNumber ?? 0;
+    final episode = entry.identity.episodeNumber ?? 0;
     if (season > 0 && episode > 0) {
       return 'S${season.toString()} · E${episode.toString()}';
-    } else if (session.year != null) {
-      return '${session.year}';
+    } else if (entry.identity.year != null) {
+      return '${entry.identity.year}';
     } else {
       return '';
     }
   }
 
-  String get displayUserName {
-    final name = session.userName?.trim();
-    if (name != null && name.isNotEmpty) {
-      return name;
-    }
-    return '—';
-  }
-
-  String? get displayClientDevice {
-    final client = session.client?.trim();
-    final device = session.deviceName?.trim();
-    final hasClient = client != null && client.isNotEmpty;
-    final hasDevice = device != null && device.isNotEmpty;
-
-    if (hasClient && hasDevice) {
-      return '$client · $device';
-    }
-    if (hasClient) {
-      return client;
-    }
-    if (hasDevice) {
-      return device;
-    }
-    return null;
-  }
-
-  String get displayTitle {
-    final name = session.name?.trim();
-    if (name != null && name.isNotEmpty) {
-      return name;
-    }
-    return '—';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final imageUrl = session.imageUrl ?? '';
-    final progress = session.progress;
-    final duration = session.duration;
+    final imageUrl = entry.identity.primaryImageUrl != null
+        ? entry.identity.primaryImageUrl!
+        : '';
+    final progress =
+        Duration(microseconds: (entry.timing.endPositionTicks ?? 0) ~/ 10);
+    final duration =
+        Duration(microseconds: (entry.timing.runtimeTicks ?? 0) ~/ 10);
     final remaining = duration - progress;
     final clampedRemaining = remaining.isNegative ? Duration.zero : remaining;
     final minutesLeft = clampedRemaining.inMinutes;
     final endDateTime = DateTime.now().add(clampedRemaining);
     final endTimeOfDay = TimeOfDay.fromDateTime(endDateTime);
-    final transcoding = session.transcodingInfo;
-    final bitrateText = formatBitrate(session.bitrate ?? 0);
+    final transcoding = entry.transcoding;
+    final bitrateText = formatBitrate(entry.transcoding?.bitrate ?? 0);
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
@@ -325,7 +294,7 @@ class CurrentActivityCard extends StatelessWidget {
                 // Poster
                 SessionPoster(
                   imageUrl: imageUrl,
-                  isPaused: session.isPaused,
+                  isPaused: entry.isPaused,
                 ),
                 // Main content
                 Expanded(
@@ -334,13 +303,15 @@ class CurrentActivityCard extends StatelessWidget {
                     children: [
                       // Title
                       Text(
-                        displayTitle,
+                        entry.contentType == ContentType.episode
+                            ? (entry.identity.seriesName ?? '')
+                            : entry.identity.title,
                         style: theme.textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),
-                        subtitle.isNotEmpty
+                      subtitle.isNotEmpty
                           ? Text(
                               subtitle,
                               style: theme.textTheme.bodyMedium
@@ -360,32 +331,32 @@ class CurrentActivityCard extends StatelessWidget {
             SessionProgressSlider(
               progress: progress,
               duration: duration,
-              transcodingProgressPercent: transcoding.progress,
+              transcodingProgressPercent:
+                  transcoding?.completionPercentage ?? 0,
             ),
             Row(
               spacing: 16,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 UserAvatar(
-                  userName: displayUserName,
-                  userImageUrl: session.userImageUrl,
+                  userName: entry.user.userName,
+                  userImageUrl: entry.user.userImageUrl,
                 ),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        displayUserName,
+                        entry.user.userName,
                         style: theme.textTheme.bodyMedium,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (displayClientDevice != null)
-                        Text(
-                          displayClientDevice!,
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(color: theme.hintColor),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      Text(
+                        '${entry.client.clientName} · ${entry.client.deviceName}',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: theme.hintColor),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       bitrateText != null
                           ? Text(
                               bitrateText,
@@ -398,8 +369,8 @@ class CurrentActivityCard extends StatelessWidget {
                   ),
                 ),
                 TranscodingBadges(
-                  isAudioDirectStream: transcoding.audio.isDirectStream,
-                  isVideoDirectStream: transcoding.video.isDirectStream,
+                  isAudioDirectStream: transcoding?.isAudioDirect ?? false,
+                  isVideoDirectStream: transcoding?.isVideoDirect ?? false,
                 ),
               ],
             )

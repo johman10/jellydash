@@ -52,6 +52,7 @@ void main() {
     Future<void> onRefresh() async {
       refreshed = true;
     }
+
     final router = _testRouter(AppScaffold(
       title: 'Test',
       onRefresh: onRefresh,

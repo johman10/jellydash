@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jellydash/scaffolds/app_scaffold.dart';
+import 'package:jellydash/services/settings_holder.dart';
 import '../services/app_settings_service.dart';
+import '../services/snackbar_manager.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AppSettings appSettings;
@@ -16,6 +19,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _baseUrlController;
   late final TextEditingController _apiKeyController;
   final _formKey = GlobalKey<FormState>();
+  late bool _usePluginApi;
 
   @override
   void initState() {
@@ -26,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         TextEditingController(text: widget.appSettings.jellyfinApiKey);
     _pollingIntervalController = TextEditingController(
         text: widget.appSettings.pollingInterval.toString());
+    _usePluginApi = widget.appSettings.usePluginApi;
   }
 
   @override
@@ -36,23 +41,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _saveSettings(
-      String baseUrl, String apiKey, int pollingInterval) async {
+  Future<void> _saveSettings(String baseUrl, String apiKey, int pollingInterval,
+      bool usePluginApi) async {
     final service = AppSettingsService();
     await service.saveJellyfinBaseUrl(baseUrl);
     await service.saveJellyfinApiKey(apiKey);
     await service.savePollingInterval(pollingInterval);
+    await service.saveUsePluginApi(usePluginApi);
   }
 
   Future<void> handleSavePressed() async {
-    var scaffoldMessenger = ScaffoldMessenger.of(context);
     if (_formKey.currentState!.validate()) {
-      await _saveSettings(_baseUrlController.text, _apiKeyController.text,
-          int.parse(_pollingIntervalController.text));
+      final service = AppSettingsService();
 
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Settings saved')),
+      await _saveSettings(
+        _baseUrlController.text,
+        _apiKeyController.text,
+        int.parse(_pollingIntervalController.text),
+        _usePluginApi,
       );
+
+      // Apply settings live so the dashboard can react immediately.
+      final updatedSettings = await service.loadSettings();
+
+      if (!mounted) return;
+
+      final settingsNotifier = SettingsHolder.maybeNotifierOf(context);
+      if (settingsNotifier != null) {
+        settingsNotifier.value = updatedSettings;
+      }
+
+      SnackbarManager.instance.show(context, 'Settings saved');
     }
   }
 
@@ -60,6 +79,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'Settings',
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        tooltip: 'Back',
+        onPressed: () {
+          GoRouter.of(context).go('/');
+        },
+      ),
       children: [
         Form(
           key: _formKey,
@@ -78,7 +104,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     validator: (value) {
                       var parsedUri = Uri.tryParse(_baseUrlController.text);
-                      if (value == null || value.isEmpty || (parsedUri != null && !parsedUri.isAbsolute)) {
+                      if (value == null ||
+                          value.isEmpty ||
+                          (parsedUri != null && !parsedUri.isAbsolute)) {
                         return 'Please enter the Jellyfin hostname';
                       }
                       return null;
@@ -115,6 +143,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         return 'Please enter a valid positive integer';
                       }
                       return null;
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Use Jellydash Plugin API'),
+                    subtitle: const Text(
+                        'Use the Jellydash plugin endpoints for activity and history. This requires the plugin to be installed on your Jellyfin instance, but offers more features.'),
+                    contentPadding: EdgeInsets.zero,
+                    value: _usePluginApi,
+                    onChanged: (val) {
+                      setState(() {
+                        _usePluginApi = val;
+                      });
                     },
                   ),
                   Align(

@@ -6,7 +6,7 @@ namespace Jellyfin.Plugin.Jellydash.Models;
 /// <summary>
 /// Represents the identity and display metadata for a media item.
 /// </summary>
-public class ContentIdentityDto(ContentKind contentKind, Guid itemId, Guid? parentItemId)
+public class ContentIdentityDto(ContentType contentType, Guid itemId, Guid? parentItemId)
 {
     /// <summary>
     /// Gets the relative path to the primary image.
@@ -15,7 +15,7 @@ public class ContentIdentityDto(ContentKind contentKind, Guid itemId, Guid? pare
     {
         get
         {
-            if (contentKind == ContentKind.Episode)
+            if (contentType == ContentType.Episode)
             {
                 return $"/Items/{parentItemId}/Images/Primary";
             }
@@ -27,7 +27,7 @@ public class ContentIdentityDto(ContentKind contentKind, Guid itemId, Guid? pare
     }
 
     /// <summary>
-    /// Gets the primary display title (series or movie name).
+    /// Gets the primary display title (episode or movie name).
     /// </summary>
     public string Title { get; init; } = string.Empty;
 

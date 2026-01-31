@@ -4,6 +4,7 @@ using Jellyfin.Plugin.Jellydash.Services;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Events;
+using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net.WebSocketMessages.Outbound;
 using MediaBrowser.Controller.Plugins;
@@ -32,6 +33,7 @@ public sealed class JellydashServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddScoped<IEventConsumer<PlaybackStartEventArgs>, PlaybackTracker>();
         serviceCollection.AddScoped<IEventConsumer<PlaybackProgressEventArgs>, PlaybackTracker>();
         serviceCollection.AddScoped<IEventConsumer<PlaybackStopEventArgs>, PlaybackTracker>();
+        serviceCollection.AddScoped<IEventConsumer<SessionEndedEventArgs>, PlaybackTracker>();
 
         // Register activity repository as a singleton service for API controllers.
         serviceCollection.AddSingleton<PlaybackEntryRepository>();

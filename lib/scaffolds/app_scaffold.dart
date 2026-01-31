@@ -5,12 +5,14 @@ class AppScaffold extends StatelessWidget {
   final List<Widget> children;
   final String title;
   final List<Widget>? actions;
+  final Widget? leading;
   final Future<void> Function()? onRefresh;
   const AppScaffold({
     super.key,
     required this.children,
     required this.title,
     this.actions,
+    this.leading,
     this.onRefresh,
   });
 
@@ -22,9 +24,8 @@ class AppScaffold extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: maxContentWidth,
-            minHeight: constraints.maxHeight - kToolbarHeight
-          ),
+              maxWidth: maxContentWidth,
+              minHeight: constraints.maxHeight - kToolbarHeight),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -51,7 +52,7 @@ class AppScaffold extends StatelessWidget {
                   GoRouter.of(context).pop();
                 },
               )
-            : null,
+            : leading,
         title: Text(title),
         actions: actions,
       ),

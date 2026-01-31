@@ -1,26 +1,32 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../types/session.dart';
+import 'package:jellydash/services/api_service.dart';
+import 'package:jellydash/services/exceptions.dart';
+import 'package:jellydash/types/activity_response.dart';
+import 'package:jellydash/types/playback_entry.dart';
 
-class JellyfinApiService {
-  final String baseUrl;
-  final String apiKey;
+class JellyfinApiService extends ApiService {
+  JellyfinApiService({required super.baseUrl, required super.apiKey});
 
-  JellyfinApiService({required this.baseUrl, required this.apiKey});
-
-  Future<List<Session>> fetchCurrentSessions() async {
+  @override
+  Future<ActivityResponse> fetchActivity(
+      bool includeActive, int? limit, String? cursor) async {
     final url = Uri.parse('$baseUrl/Sessions');
-    final response = await http.get(url, headers: {
-      'X-Emby-Token': apiKey,
-    });
+    final response = await get(url);
     if (response.statusCode == 200) {
       var parsedResponse = jsonDecode(response.body) as List<dynamic>;
-      return parsedResponse
-          .map((sessionJson) => Session.fromJson(baseUrl, sessionJson))
-          .where((session) => session.isPlaying)
+      var playbackEntries = parsedResponse
+          .where((session) => session['NowPlayingItem'] != null)
+          .map((session) => PlaybackEntry.fromSessionJson(baseUrl, session))
           .toList();
+      playbackEntries
+          .sort((a, b) => b.identity.title.compareTo(a.identity.title));
+      return ActivityResponse(items: playbackEntries, nextCursor: null);
+    } else if (response.statusCode == 404) {
+      throw NotFoundException();
+    } else if (response.statusCode == 401) {
+      throw UnauthorizedException();
     } else {
-      throw Exception('Failed to load sessions: ${response.statusCode}');
+      throw NetworkException(NetworkExceptionType.unknown);
     }
   }
 }

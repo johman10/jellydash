@@ -125,7 +125,7 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         {
             PlaybackId = Guid.NewGuid(),
             ItemId = Guid.NewGuid(),
-            ContentKind = Models.ContentKind.Movie,
+            ContentType = Models.ContentType.Movie,
             Title = "Item",
             UserId = Guid.NewGuid(),
             UserName = "User",

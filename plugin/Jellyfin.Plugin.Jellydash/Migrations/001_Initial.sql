@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS PlaybackEntries (
     -- Identity
     ItemId                      TEXT    NULL,
     ParentItemId                TEXT    NULL,
-    ContentKind                 INTEGER NOT NULL,
+    ContentType                 INTEGER NOT NULL,
     Title                       TEXT    NOT NULL,
     Genres                      TEXT    NULL,
     Year                        INTEGER NULL,
@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS PlaybackEntries (
     -- User
     UserId                      TEXT    NOT NULL,
     UserName                    TEXT    NOT NULL,
+    UserPrimaryImageTag         TEXT    NULL,
 
     -- Client
     ClientName                  TEXT    NOT NULL,
