@@ -114,12 +114,12 @@ public class PlaybackEntry
     /// <summary>
     /// Gets or sets the UTC timestamp when this span started.
     /// </summary>
-    public DateTime StartUtc { get; set; }
+    public DateTimeOffset StartTime { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC timestamp when this span ended, if completed.
     /// </summary>
-    public DateTime? EndUtc { get; set; }
+    public DateTimeOffset? EndTime { get; set; }
 
     /// <summary>
     /// Gets or sets the total runtime of the item in ticks.
@@ -293,12 +293,12 @@ public class PlaybackEntry
     {
         var entry = FromEvent(eventArgs);
         // For start events, set the start time and initial position.
-        entry.StartUtc = DateTime.UtcNow;
+        entry.StartTime = DateTimeOffset.UtcNow;
         entry.StartPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsCompleted = false;
         entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsPaused = false;
-        entry.EndUtc = null;
+        entry.EndTime = null;
         return entry;
     }
 
@@ -319,12 +319,12 @@ public class PlaybackEntry
     {
         var entry = FromEvent(eventArgs);
         // For progress events, set the current position.
-        entry.StartUtc = existing?.StartUtc ?? DateTime.UtcNow;
+        entry.StartTime = existing?.StartTime ?? DateTimeOffset.UtcNow;
         entry.StartPositionTicks = existing?.StartPositionTicks ?? 0;
         entry.IsCompleted = false;
         entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsPaused = eventArgs.IsPaused;
-        entry.EndUtc = null;
+        entry.EndTime = null;
         return entry;
     }
 
@@ -345,12 +345,12 @@ public class PlaybackEntry
     {
         var entry = existing ?? FromEvent(eventArgs);
         // For stop events, set the end time and final position.
-        entry.StartUtc = existing?.StartUtc ?? DateTime.UtcNow;
+        entry.StartTime = existing?.StartTime ?? DateTimeOffset.UtcNow;
         entry.StartPositionTicks = existing?.StartPositionTicks ?? 0;
         entry.IsCompleted = true;
         entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsPaused = false;
-        entry.EndUtc = eventArgs.Session.LastPlaybackCheckIn;
+        entry.EndTime = eventArgs.Session.LastPlaybackCheckIn;
         return entry;
     }
 
@@ -368,7 +368,7 @@ public class PlaybackEntry
         entry.EndPositionTicks = eventArgs.Argument.PlayState?.PositionTicks ?? existing.EndPositionTicks;
         entry.IsPaused = false;
         entry.IsCompleted = true;
-        entry.EndUtc = eventArgs.Argument.LastPlaybackCheckIn;
+        entry.EndTime = eventArgs.Argument.LastPlaybackCheckIn;
 
         // Clear transcoding info as playback has ended. This matches the behavior in FromStopEvent.
         entry.IsAudioDirect = true;

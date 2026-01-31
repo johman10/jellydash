@@ -158,8 +158,8 @@ class ClientInfo {
 }
 
 class TimingInfo {
-  final DateTime? startUtc;
-  final DateTime? endUtc;
+  final DateTime? startTime;
+  final DateTime? endTime;
   final int? runtimeTicks;
   final int? startPositionTicks;
   final int? endPositionTicks;
@@ -167,8 +167,8 @@ class TimingInfo {
   final double? endPercentage;
 
   const TimingInfo({
-    this.startUtc,
-    this.endUtc,
+    this.startTime,
+    this.endTime,
     this.runtimeTicks,
     this.startPositionTicks,
     this.endPositionTicks,
@@ -177,12 +177,12 @@ class TimingInfo {
   });
 
   factory TimingInfo.fromJson(Map<String, dynamic> json) {
-    final startUtcStr = json['start_utc'] as String?;
-    final endUtcStr = json['end_utc'] as String?;
+    final startTimeStr = json['start_time'] as String?;
+    final endTimeStr = json['end_time'] as String?;
 
     return TimingInfo(
-      startUtc: startUtcStr != null ? DateTime.parse(startUtcStr) : null,
-      endUtc: endUtcStr != null ? DateTime.parse(endUtcStr) : null,
+      startTime: startTimeStr != null ? DateTime.parse(startTimeStr) : null,
+      endTime: endTimeStr != null ? DateTime.parse(endTimeStr) : null,
       runtimeTicks: json['runtime_ticks'] as int?,
       startPositionTicks: json['start_position_ticks'] as int?,
       endPositionTicks: json['end_position_ticks'] as int?,
@@ -205,8 +205,8 @@ class TimingInfo {
     }
 
     return TimingInfo(
-      startUtc: null,
-      endUtc: null,
+      startTime: null,
+      endTime: null,
       runtimeTicks: runTimeTicks,
       startPositionTicks: 0,
       endPositionTicks: positionTicks,

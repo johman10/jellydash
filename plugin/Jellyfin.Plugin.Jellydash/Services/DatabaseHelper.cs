@@ -59,6 +59,8 @@ public class DatabaseHelper
         SqlMapper.AddTypeHandler(new GuidTypeHandler());
         SqlMapper.AddTypeHandler(new NullableGuidTypeHandler());
         SqlMapper.AddTypeHandler(new StringCollectionTypeHandler());
+        SqlMapper.AddTypeHandler(new DateTimeOffsetTypeHandler());
+        SqlMapper.AddTypeHandler(new NullableDateTimeOffsetTypeHandler());
     }
 
     /// <summary>

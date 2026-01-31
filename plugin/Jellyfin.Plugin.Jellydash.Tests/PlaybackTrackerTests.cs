@@ -5,7 +5,6 @@ using Jellyfin.Plugin.Jellydash.Services;
 using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -27,7 +26,7 @@ public sealed class PlaybackTrackerTests
     private static async Task<PlaybackEntryRepository> CreateRepositoryAsync()
     {
         var repo = new PlaybackEntryRepository(DatabaseHelper);
-        await repo.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None);
+        await repo.DeleteOlderThanAsync(DateTimeOffset.UtcNow.AddYears(1000), CancellationToken.None);
         return repo;
     }
 
@@ -122,6 +121,7 @@ public sealed class PlaybackTrackerTests
         startArgs.Session.UserId = userId;
         startArgs.Session.NowPlayingItem = startArgs.MediaInfo;
         startArgs.Session.PlayState.PositionTicks = 5_000_000L;
+        startArgs.Session.LastPlaybackCheckIn = DateTime.UtcNow;
 
         var endedArgs = new SessionEndedEventArgs(startArgs.Session);
         await tracker.OnEvent(endedArgs);
@@ -129,7 +129,7 @@ public sealed class PlaybackTrackerTests
         var completed = await repo.GetRecentlyCompletedByPlaybackIdAsync(playbackId, CancellationToken.None);
         Assert.NotNull(completed);
         Assert.True(completed.IsCompleted);
-        Assert.NotNull(completed.EndUtc);
+        Assert.NotNull(completed.EndTime);
     }
 
     private static PlaybackStartEventArgs CreatePlaybackStartEventArgs(Guid userId, Guid itemId, BaseItemKind kind, long runtimeTicks, long startPositionTicks)
@@ -189,7 +189,8 @@ public sealed class PlaybackTrackerTests
         var session = new SessionInfo(mockSessionManager, mockLogger)
         {
             Id = sessionId,
-            PlaylistItemId = playlistItemId
+            PlaylistItemId = playlistItemId,
+            LastPlaybackCheckIn = DateTime.UtcNow
         };
 
 

@@ -30,10 +30,10 @@ public sealed class PlaybackEntryRepository(DatabaseHelper databaseHelper)
     /// <param name="includeActive">Whether to include active (not completed) entries.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A tuple containing the entries and paging state.</returns>
-    public async Task<(IReadOnlyList<PlaybackEntry> Entries, int? LastId, DateTime? LastEndUtc)> GetActivitiesAsync(
+    public async Task<(IReadOnlyList<PlaybackEntry> Entries, int? LastId, DateTimeOffset? LastEndUtc)> GetActivitiesAsync(
         int limit,
         int? beforeId,
-        DateTime? beforeEndUtc,
+        DateTimeOffset? beforeEndUtc,
         bool includeActive,
         CancellationToken cancellationToken)
     {
@@ -55,10 +55,10 @@ public sealed class PlaybackEntryRepository(DatabaseHelper databaseHelper)
                             UNION ALL
                             SELECT * FROM PlaybackEntries WHERE IsCompleted = 1
                         )
-                        WHERE (COALESCE(EndUtc, StartUtc) < @BeforeEndUtc)
-                           OR (COALESCE(EndUtc, StartUtc) = @BeforeEndUtc AND Id < @BeforeId)
+                        WHERE (COALESCE(EndTime, StartTime) < @BeforeEndUtc)
+                           OR (COALESCE(EndTime, StartTime) = @BeforeEndUtc AND Id < @BeforeId)
                            AND ContentType IN (0, 1)
-                        ORDER BY COALESCE(EndUtc, StartUtc) DESC, Id DESC
+                        ORDER BY COALESCE(EndTime, StartTime) DESC, Id DESC
                         LIMIT @Limit;";
                     entries = (await connection.QueryAsync<PlaybackEntry>(sql, new { BeforeEndUtc = beforeEndUtc.Value, BeforeId = beforeId.Value, Limit = limit }).ConfigureAwait(false)).AsList();
                 }
@@ -71,7 +71,7 @@ public sealed class PlaybackEntryRepository(DatabaseHelper databaseHelper)
                             SELECT * FROM PlaybackEntries WHERE IsCompleted = 1
                         )
                         WHERE ContentType IN (0, 1)
-                        ORDER BY COALESCE(EndUtc, StartUtc) DESC, Id DESC
+                        ORDER BY COALESCE(EndTime, StartTime) DESC, Id DESC
                         LIMIT @Limit;";
                     entries = (await connection.QueryAsync<PlaybackEntry>(sql, new { Limit = limit }).ConfigureAwait(false)).AsList();
                 }
@@ -87,9 +87,9 @@ public sealed class PlaybackEntryRepository(DatabaseHelper databaseHelper)
                         FROM PlaybackEntries
                         WHERE IsCompleted = 1
                           AND ContentType IN (0, 1)
-                          AND ((EndUtc < @BeforeEndUtc)
-                           OR (EndUtc = @BeforeEndUtc AND Id < @BeforeId))
-                        ORDER BY EndUtc DESC, Id DESC
+                          AND ((EndTime < @BeforeEndUtc)
+                           OR (EndTime = @BeforeEndUtc AND Id < @BeforeId))
+                        ORDER BY EndTime DESC, Id DESC
                         LIMIT @Limit;";
                     entries = (await connection.QueryAsync<PlaybackEntry>(sql, new { BeforeEndUtc = beforeEndUtc.Value, BeforeId = beforeId.Value, Limit = limit }).ConfigureAwait(false)).AsList();
                 }
@@ -99,19 +99,19 @@ public sealed class PlaybackEntryRepository(DatabaseHelper databaseHelper)
                         SELECT *
                         FROM PlaybackEntries
                         WHERE IsCompleted = 1 AND ContentType IN (0, 1)
-                        ORDER BY EndUtc DESC, Id DESC
+                        ORDER BY EndTime DESC, Id DESC
                         LIMIT @Limit;";
                     entries = (await connection.QueryAsync<PlaybackEntry>(sql, new { Limit = limit }).ConfigureAwait(false)).AsList();
                 }
             }
 
             int? lastId = null;
-            DateTime? lastEndUtc = null;
+            DateTimeOffset? lastEndUtc = null;
             if (entries.Count > 0)
             {
                 var lastEntry = entries[^1];
                 lastId = lastEntry.Id;
-                lastEndUtc = lastEntry.EndUtc ?? lastEntry.StartUtc;
+                lastEndUtc = lastEntry.EndTime ?? lastEntry.StartTime;
             }
 
             return (entries, lastId, lastEndUtc);
@@ -145,7 +145,7 @@ public sealed class PlaybackEntryRepository(DatabaseHelper databaseHelper)
 SELECT *
 FROM PlaybackEntries
 WHERE PlaybackId = @PlaybackId AND IsCompleted = 0
-ORDER BY StartUtc DESC
+ORDER BY StartTime DESC
 LIMIT 1;";
 
             var command = new CommandDefinition(sql, new { PlaybackId = playbackId }, cancellationToken: cancellationToken);
@@ -181,7 +181,7 @@ LIMIT 1;";
 SELECT *
 FROM PlaybackEntries
 WHERE PlaybackId = @PlaybackId AND IsCompleted = 1
-ORDER BY StartUtc DESC
+ORDER BY StartTime DESC
 LIMIT 1;";
 
             var command = new CommandDefinition(sql, new { PlaybackId = playbackId }, cancellationToken: cancellationToken);
@@ -224,13 +224,13 @@ LIMIT 1;";
     /// <param name="cutoffUtc">UTC cutoff time.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of removed entries.</returns>
-    public async Task<int> DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
+    public async Task<int> DeleteOlderThanAsync(DateTimeOffset cutoffUtc, CancellationToken cancellationToken)
     {
         await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
-            var sql = "DELETE FROM PlaybackEntries WHERE EndUtc < @cutoffUtc;";
+            var sql = "DELETE FROM PlaybackEntries WHERE EndTime < @cutoffUtc;";
             return await connection.ExecuteAsync(sql, new { cutoffUtc }).ConfigureAwait(false);
         }
         finally

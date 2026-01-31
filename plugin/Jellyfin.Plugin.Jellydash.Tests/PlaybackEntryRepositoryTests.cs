@@ -19,13 +19,13 @@ public class PlaybackEntryRepositoryTests
     private static async Task CleanDatabaseAsync(PlaybackEntryRepository repository)
     {
         // Delete all entries by using a far future date
-        await repository.DeleteOlderThanAsync(DateTime.UtcNow.AddYears(1000), CancellationToken.None);
+        await repository.DeleteOlderThanAsync(DateTimeOffset.UtcNow.AddYears(1000), CancellationToken.None);
 
-        // Also manually clean incomplete entries (those with NULL EndUtc)
+        // Also manually clean incomplete entries (those with NULL EndTime)
         using var connection = new Microsoft.Data.Sqlite.SqliteConnection(DatabaseHelper.ConnectionString);
         await connection.OpenAsync();
         using var cmd = connection.CreateCommand();
-        cmd.CommandText = "DELETE FROM PlaybackEntries WHERE EndUtc IS NULL;";
+        cmd.CommandText = "DELETE FROM PlaybackEntries WHERE EndTime IS NULL;";
         await cmd.ExecuteNonQueryAsync();
     }
 
@@ -38,7 +38,7 @@ public class PlaybackEntryRepositoryTests
         // Ensure a clean database.
         await CleanDatabaseAsync(repository);
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var older = CreateEntry(now.AddMinutes(-20), now.AddMinutes(-10), ContentType.Movie);
         var newer = CreateEntry(now.AddMinutes(-10), now, ContentType.Movie);
 
@@ -47,11 +47,11 @@ public class PlaybackEntryRepositoryTests
 
         var (firstPage, lastId, lastEndUtc) = await repository.GetActivitiesAsync(1, null, null, false, cancellationToken);
         Assert.Single(firstPage);
-        Assert.Equal(newer.EndUtc, firstPage[0].EndUtc);
+        Assert.Equal(newer.EndTime, firstPage[0].EndTime);
 
         var (secondPage, _, _) = await repository.GetActivitiesAsync(10, lastId, lastEndUtc, false, cancellationToken);
         Assert.Single(secondPage);
-        Assert.Equal(older.EndUtc, secondPage[0].EndUtc);
+        Assert.Equal(older.EndTime, secondPage[0].EndTime);
     }
 
     [Fact]
@@ -105,9 +105,9 @@ public class PlaybackEntryRepositoryTests
         // Ensure a clean database.
         await CleanDatabaseAsync(repository);
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var completed = CreateEntry(now.AddMinutes(-20), now.AddMinutes(-10), ContentType.Movie);
-        var incomplete = CreateEntry(now.AddMinutes(-10), (DateTime?)null, ContentType.Movie);
+        var incomplete = CreateEntry(now.AddMinutes(-10), (DateTimeOffset?)null, ContentType.Movie);
         incomplete.IsCompleted = false;
 
         await repository.AppendAsync(completed, cancellationToken);
@@ -129,9 +129,9 @@ public class PlaybackEntryRepositoryTests
         // Ensure a clean database.
         await CleanDatabaseAsync(repository);
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var completed = CreateEntry(now.AddMinutes(-30), now.AddMinutes(-20), ContentType.Movie);
-        var incomplete = CreateEntry(now.AddMinutes(-10), (DateTime?)null, ContentType.Movie);
+        var incomplete = CreateEntry(now.AddMinutes(-10), (DateTimeOffset?)null, ContentType.Movie);
         incomplete.IsCompleted = false;
 
         await repository.AppendAsync(completed, cancellationToken);
@@ -141,10 +141,10 @@ public class PlaybackEntryRepositoryTests
 
         Assert.Equal(2, entries.Count);
 
-        // Incomplete entry should be first (most recent StartUtc)
+        // Incomplete entry should be first (most recent StartTime)
         Assert.Equal(incomplete.PlaybackId, entries[0].PlaybackId);
         Assert.False(entries[0].IsCompleted);
-        Assert.Null(entries[0].EndUtc);
+        Assert.Null(entries[0].EndTime);
 
         Assert.Equal(completed.PlaybackId, entries[1].PlaybackId);
         Assert.True(entries[1].IsCompleted);
@@ -159,10 +159,10 @@ public class PlaybackEntryRepositoryTests
         // Ensure a clean database.
         await CleanDatabaseAsync(repository);
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var sameEndTime = now.AddMinutes(-10);
 
-        // Create three entries with the same EndUtc
+        // Create three entries with the same EndTime
         var entry1 = CreateEntry(now.AddMinutes(-30), sameEndTime, ContentType.Movie);
         var entry2 = CreateEntry(now.AddMinutes(-30), sameEndTime, ContentType.Movie);
         var entry3 = CreateEntry(now.AddMinutes(-30), sameEndTime, ContentType.Movie);
@@ -174,7 +174,7 @@ public class PlaybackEntryRepositoryTests
         var (entries, _, _) = await repository.GetActivitiesAsync(10, null, null, false, cancellationToken);
 
         Assert.Equal(3, entries.Count);
-        // Should be ordered by Id DESC when EndUtc is the same
+        // Should be ordered by Id DESC when EndTime is the same
         Assert.True(entries[0].Id > entries[1].Id);
         Assert.True(entries[1].Id > entries[2].Id);
     }
@@ -188,7 +188,7 @@ public class PlaybackEntryRepositoryTests
         // Ensure a clean database.
         await CleanDatabaseAsync(repository);
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         for (int i = 0; i < 10; i++)
         {
             var entry = CreateEntry(now.AddMinutes(-20 - i), now.AddMinutes(-10 - i), ContentType.Movie);
@@ -209,7 +209,7 @@ public class PlaybackEntryRepositoryTests
         // Ensure a clean database.
         await CleanDatabaseAsync(repository);
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var allEntries = new List<PlaybackEntry>();
 
         for (int i = 0; i < 7; i++)
@@ -242,7 +242,7 @@ public class PlaybackEntryRepositoryTests
         Assert.Equal(7, allIds.Distinct().Count());
 
         // Verify ordering across pages
-        var allEndTimes = page1.Concat(page2).Concat(page3).Select(e => e.EndUtc!.Value).ToList();
+        var allEndTimes = page1.Concat(page2).Concat(page3).Select(e => e.EndTime!.Value).ToList();
         Assert.Equal(allEndTimes, allEndTimes.OrderByDescending(t => t).ToList());
     }
 
@@ -255,13 +255,13 @@ public class PlaybackEntryRepositoryTests
         // Ensure a clean database.
         await CleanDatabaseAsync(repository);
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
 
         // Old completed entry
         var oldCompleted = CreateEntry(now.AddMinutes(-60), now.AddMinutes(-50), ContentType.Movie);
 
         // Recent incomplete entry (active)
-        var recentActive = CreateEntry(now.AddMinutes(-5), (DateTime?)null, ContentType.Movie);
+        var recentActive = CreateEntry(now.AddMinutes(-5), (DateTimeOffset?)null, ContentType.Movie);
         recentActive.IsCompleted = false;
 
         // Recent completed entry
@@ -275,7 +275,7 @@ public class PlaybackEntryRepositoryTests
 
         Assert.Equal(3, entries.Count);
 
-        // Order should be: recentActive (StartUtc), recentCompleted (EndUtc), oldCompleted (EndUtc)
+        // Order should be: recentActive (StartTime), recentCompleted (EndTime), oldCompleted (EndTime)
         Assert.Equal(recentActive.PlaybackId, entries[0].PlaybackId);
         Assert.False(entries[0].IsCompleted);
 
@@ -295,26 +295,26 @@ public class PlaybackEntryRepositoryTests
         // Ensure a clean database.
         await CleanDatabaseAsync(repository);
 
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         var older = CreateEntry(now.AddDays(-10), now.AddDays(-9), ContentType.Movie);
         var newer = CreateEntry(now.AddDays(-2), now.AddDays(-1), ContentType.Movie);
 
         await repository.AppendAsync(older, cancellationToken);
         await repository.AppendAsync(newer, cancellationToken);
 
-        var cutoff = newer.EndUtc!.Value.AddDays(-2);
+        var cutoff = newer.EndTime!.Value.AddDays(-2);
         var removed = await repository.DeleteOlderThanAsync(cutoff, cancellationToken);
         Assert.Equal(1, removed);
 
         var newer_entry = await repository.GetRecentlyCompletedByPlaybackIdAsync(newer.PlaybackId, cancellationToken);
         Assert.NotNull(newer_entry);
-        Assert.Equal(newer.EndUtc, newer_entry.EndUtc);
+        Assert.Equal(newer.EndTime, newer_entry.EndTime);
 
         var older_entry = await repository.GetRecentlyCompletedByPlaybackIdAsync(older.PlaybackId, cancellationToken);
         Assert.Null(older_entry);
     }
 
-    private static PlaybackEntry CreateEntry(DateTime startUtc, DateTime? endUtc, ContentType contentType = ContentType.Movie)
+    private static PlaybackEntry CreateEntry(DateTimeOffset startTime, DateTimeOffset? endUtc, ContentType contentType = ContentType.Movie)
     {
         return new PlaybackEntry
         {
@@ -326,8 +326,8 @@ public class PlaybackEntryRepositoryTests
             UserName = "User",
             ClientName = "TestClient",
             DeviceName = "TestDevice",
-            StartUtc = startUtc,
-            EndUtc = endUtc,
+            StartTime = startTime,
+            EndTime = endUtc,
             IsCompleted = endUtc.HasValue
         };
     }
