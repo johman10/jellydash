@@ -375,8 +375,6 @@ jobs:
 
       - name: Update manifest.json
         run: |
-          VERSION=${{ needs.get-version.outputs.VERSION }}
-          CHECKSUM=${{ steps.checksum.outputs.CHECKSUM }}
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S")
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/jellydash-plugin-${VERSION}.zip"
 
@@ -395,9 +393,9 @@ jobs:
 
           version = os.environ['VERSION']
           checksum = os.environ['CHECKSUM']
-          timestamp = os.environ['TIMESTAMP']
-          download_url = os.environ['DOWNLOAD_URL']
-          target_abi = os.environ['TARGET_ABI']
+          timestamp = TIMESTAMP
+          download_url = DOWNLOAD_URL
+          target_abi = TARGET_ABI
           changelog = os.environ['CHANGELOG']
 
           # Add new version to the beginning of versions array
