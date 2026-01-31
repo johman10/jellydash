@@ -348,6 +348,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -422,9 +425,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin master
-          git checkout master
-          git pull --rebase origin master
           git add plugin/manifest.json
           git commit -m "Update manifest.json for v${{ needs.get-version.outputs.VERSION }}"
           git push origin master
