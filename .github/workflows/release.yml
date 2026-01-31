@@ -375,8 +375,12 @@ jobs:
 
       - name: Update manifest.json
         run: |
-          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S")
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/jellydash-plugin-${VERSION}.zip"
+          export VERSION="${{ needs.get-version.outputs.VERSION }}"
+          export CHECKSUM="${{ steps.checksum.outputs.CHECKSUM }}"
+          export CHANGELOG="${{ steps.release_notes.outputs.result }}"
+          export TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S")
+          export DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/jellydash-plugin-${VERSION}.zip"
+          export TARGET_ABI=$(grep -oP 'Jellyfin.Controller" Version="\K[^"]+' plugin/Jellyfin.Plugin.Jellydash/Jellyfin.Plugin.Jellydash.csproj)
 
           # Get the target ABI from Jellyfin.Controller package version in csproj
           TARGET_ABI=$(grep -oP 'Jellyfin.Controller" Version="\K[^"]+' plugin/Jellyfin.Plugin.Jellydash/Jellyfin.Plugin.Jellydash.csproj)
@@ -393,9 +397,9 @@ jobs:
 
           version = os.environ['VERSION']
           checksum = os.environ['CHECKSUM']
-          timestamp = TIMESTAMP
-          download_url = DOWNLOAD_URL
-          target_abi = TARGET_ABI
+          timestamp = os.environ['TIMESTAMP']
+          download_url = os.environ['DOWNLOAD_URL']
+          target_abi = os.environ['TARGET_ABI']
           changelog = os.environ['CHANGELOG']
 
           # Add new version to the beginning of versions array
@@ -413,10 +417,6 @@ jobs:
           with open(manifest_path, 'w') as f:
               json.dump(manifest, f, indent=2)
           EOF
-        env:
-          VERSION: ${{ needs.get-version.outputs.VERSION }}
-          CHECKSUM: ${{ steps.checksum.outputs.CHECKSUM }}
-          CHANGELOG: ${{ steps.release_notes.outputs.result }}
 
       - name: Commit updated manifest
         run: |
