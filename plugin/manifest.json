@@ -1,0 +1,11 @@
+[
+  {
+    "category": "General",
+    "guid": "02560995-4de6-45c3-9f4f-47061951af29",
+    "name": "Jellydash",
+    "description": "Activity tracking and dashboard plugin for Jellyfin",
+    "owner": "johman10",
+    "overview": "Jellydash provides real-time activity tracking and a dashboard view for your Jellyfin server. Monitor current playback sessions, view recent activity, and get insights into media usage.",
+    "versions": []
+  }
+]
