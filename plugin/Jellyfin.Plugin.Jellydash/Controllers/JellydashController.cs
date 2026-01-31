@@ -23,6 +23,7 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
     public class JellydashController : ControllerBase
     {
         private readonly PlaybackEntryRepository _activityRepository;
+        private readonly ImageCaptureService _imageCaptureService;
 
         private static readonly JsonSerializerOptions JsonResultOptions = new(JsonSerializerDefaults.Web)
         {
@@ -34,9 +35,13 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
         /// Initializes a new instance of the <see cref="JellydashController"/> class.
         /// </summary>
         /// <param name="activityRepository">The activity repository.</param>
-        public JellydashController(PlaybackEntryRepository activityRepository)
+        /// <param name="imageCaptureService">The image capture service.</param>
+        public JellydashController(
+            PlaybackEntryRepository activityRepository,
+            ImageCaptureService imageCaptureService)
         {
             _activityRepository = activityRepository;
+            _imageCaptureService = imageCaptureService;
         }
 
         /// <summary>
@@ -109,6 +114,31 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
             var endUtc = DateTimeOffset.Parse(parts[0], CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
             var id = int.Parse(parts[1], CultureInfo.InvariantCulture);
             return (endUtc, id);
+        }
+
+        /// <summary>
+        /// Serves a cached image by its hash.
+        /// </summary>
+        /// <param name="hash">The SHA256 hash of the image.</param>
+        /// <returns>The image file or 404 if not found.</returns>
+        [HttpGet("images/{hash}")]
+        [Authorize]
+        public IActionResult GetImage([FromRoute] string hash)
+        {
+            if (string.IsNullOrWhiteSpace(hash))
+            {
+                return BadRequest("Hash is required.");
+            }
+
+            var imagePath = _imageCaptureService.GetImagePath(hash);
+            if (imagePath == null)
+            {
+                return NotFound();
+            }
+
+            // Serve the image with caching headers since hash-addressed content is immutable
+            Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            return PhysicalFile(imagePath, "image/jpeg");
         }
     }
 }

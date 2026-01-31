@@ -92,6 +92,13 @@ public class PlaybackEntry
     /// </summary>
     public string? UserPrimaryImageTag { get; set; }
 
+    // Images
+
+    /// <summary>
+    /// Gets or sets the SHA256 hash of the cached item image, if captured.
+    /// </summary>
+    public string? ItemImageHash { get; set; }
+
     // Client
 
     /// <summary>

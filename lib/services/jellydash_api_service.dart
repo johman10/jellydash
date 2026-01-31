@@ -21,7 +21,7 @@ class JellyDashApiService extends ApiService {
     final response = await get(url);
     if (response.statusCode == 200) {
       var parsedResponse = jsonDecode(response.body) as Map<String, dynamic>;
-      return ActivityResponse.fromJson(baseUrl, parsedResponse);
+      return ActivityResponse.fromJson(baseUrl, apiKey, parsedResponse);
     } else if (response.statusCode == 404) {
       throw NotFoundException();
     } else if (response.statusCode == 401) {

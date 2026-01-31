@@ -9,6 +9,11 @@ namespace Jellyfin.Plugin.Jellydash.Models;
 public class ContentIdentityDto(ContentType contentType, Guid itemId, Guid? parentItemId)
 {
     /// <summary>
+    /// Gets the SHA256 hash of the cached item image, if available.
+    /// </summary>
+    public string? ItemImageHash { get; init; }
+
+    /// <summary>
     /// Gets the relative path to the primary image.
     /// </summary>
     public string? PrimaryImagePath

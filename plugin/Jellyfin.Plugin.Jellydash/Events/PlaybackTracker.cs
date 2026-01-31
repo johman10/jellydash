@@ -26,16 +26,22 @@ public class PlaybackTracker :
 {
     private readonly ILogger<PlaybackTracker> _logger;
     private readonly PlaybackEntryRepository _repository;
+    private readonly ImageCaptureService _imageCaptureService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlaybackTracker"/> class.
     /// </summary>
     /// <param name="logger">Logger instance.</param>
     /// <param name="databaseHelper">DatabaseHelper instance.</param>
-    public PlaybackTracker(ILogger<PlaybackTracker> logger, DatabaseHelper databaseHelper)
+    /// <param name="imageCaptureService">Image capture service.</param>
+    public PlaybackTracker(
+        ILogger<PlaybackTracker> logger,
+        DatabaseHelper databaseHelper,
+        ImageCaptureService imageCaptureService)
     {
         _logger = logger;
         _repository = new PlaybackEntryRepository(databaseHelper);
+        _imageCaptureService = imageCaptureService;
     }
 
     /// <inheritdoc />
@@ -51,6 +57,13 @@ public class PlaybackTracker :
             }
 
             var entry = PlaybackEntry.FromStartEvent(eventArgs);
+
+            // Capture and cache the item image
+            var imageHash = await _imageCaptureService.CaptureImageAsync(eventArgs.Item, entry.ContentType, default).ConfigureAwait(false);
+            entry.ItemImageHash = imageHash;
+
+            _logger.LogDebug("Recording playback start event for Jellydash activity: {@Entry}", entry.ItemImageHash);
+
             await _repository.AppendAsync(entry, default).ConfigureAwait(false);
         }
         catch (Exception ex)

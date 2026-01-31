@@ -17,6 +17,7 @@ enum ContentType {
 
 class ContentIdentity {
   final String? primaryImageUrl;
+  final String? itemImageHash;
   final String title;
   final List<String> genres;
   final int? year;
@@ -26,6 +27,7 @@ class ContentIdentity {
 
   const ContentIdentity({
     this.primaryImageUrl,
+    this.itemImageHash,
     required this.title,
     this.genres = const [],
     this.year,
@@ -34,12 +36,23 @@ class ContentIdentity {
     this.seriesName,
   });
 
-  factory ContentIdentity.fromJson(String baseUrl, Map<String, dynamic> json) {
+  factory ContentIdentity.fromJson(
+      String baseUrl, String apiKey, Map<String, dynamic> json) {
+    final itemImageHash = json['item_image_hash'] as String?;
     final primaryImagePath = json['primary_image_path'] as String?;
 
+    // Prefer Jellydash cached image if available, fallback to Jellyfin image path
+    String? primaryImageUrl;
+    if (itemImageHash != null && itemImageHash.isNotEmpty) {
+      primaryImageUrl =
+          '$baseUrl/Jellydash/images/$itemImageHash?api_key=$apiKey';
+    } else if (primaryImagePath != null) {
+      primaryImageUrl = '$baseUrl$primaryImagePath';
+    }
+
     return ContentIdentity(
-      primaryImageUrl:
-          primaryImagePath != null ? '$baseUrl$primaryImagePath' : null,
+      primaryImageUrl: primaryImageUrl,
+      itemImageHash: itemImageHash,
       title: json['title'] as String? ?? '',
       genres: (json['genres'] as List<dynamic>?)
               ?.map((e) => e.toString())
@@ -79,6 +92,7 @@ class ContentIdentity {
     return ContentIdentity(
       primaryImageUrl:
           primaryImagePath != null ? '$baseUrl$primaryImagePath' : null,
+      itemImageHash: null,
       title: nowPlayingItem['Name'] as String? ?? '',
       genres: (nowPlayingItem['Genres'] as List<dynamic>?)
               ?.map((e) => e.toString())
@@ -547,7 +561,8 @@ class PlaybackEntry {
     required this.isPaused,
   });
 
-  factory PlaybackEntry.fromJson(String baseUrl, Map<String, dynamic> json) {
+  factory PlaybackEntry.fromJson(
+      String baseUrl, String apiKey, Map<String, dynamic> json) {
     final identityJson = json['identity'] as Map<String, dynamic>?;
     final userJson = json['user'] as Map<String, dynamic>?;
     final clientJson = json['client'] as Map<String, dynamic>?;
@@ -560,7 +575,7 @@ class PlaybackEntry {
       parentItemId: json['parent_item_id'] as String?,
       contentType: ContentType.fromApiKind(json['content_kind'] as String?),
       identity: identityJson != null
-          ? ContentIdentity.fromJson(baseUrl, identityJson)
+          ? ContentIdentity.fromJson(baseUrl, apiKey, identityJson)
           : ContentIdentity(title: ''),
       user: userJson != null
           ? UserInfo.fromJson(baseUrl, userJson)

@@ -314,6 +314,64 @@ public class PlaybackEntryRepositoryTests
         Assert.Null(older_entry);
     }
 
+    [Fact]
+    public async Task GetDistinctImageHashesAsync_ReturnsOnlyDistinctNonNullHashes()
+    {
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
+        var cancellationToken = CancellationToken.None;
+
+        // Ensure a clean database.
+        await CleanDatabaseAsync(repository);
+
+        var now = DateTime.UtcNow;
+
+        // Entry with hash "abc123"
+        var entry1 = CreateEntry(now.AddMinutes(-30), now.AddMinutes(-20));
+        entry1.ItemImageHash = "abc123";
+
+        // Entry with same hash "abc123" (duplicate)
+        var entry2 = CreateEntry(now.AddMinutes(-20), now.AddMinutes(-10));
+        entry2.ItemImageHash = "abc123";
+
+        // Entry with different hash "def456"
+        var entry3 = CreateEntry(now.AddMinutes(-10), now);
+        entry3.ItemImageHash = "def456";
+
+        // Entry with null hash
+        var entry4 = CreateEntry(now.AddMinutes(-5), now.AddMinutes(-1));
+        entry4.ItemImageHash = null;
+
+        await repository.AppendAsync(entry1, cancellationToken);
+        await repository.AppendAsync(entry2, cancellationToken);
+        await repository.AppendAsync(entry3, cancellationToken);
+        await repository.AppendAsync(entry4, cancellationToken);
+
+        // Act
+        var hashes = await repository.GetDistinctImageHashesAsync(cancellationToken);
+
+        // Assert
+        Assert.Equal(2, hashes.Count);
+        Assert.Contains("abc123", hashes);
+        Assert.Contains("def456", hashes);
+        Assert.DoesNotContain(null, hashes);
+    }
+
+    [Fact]
+    public async Task GetDistinctImageHashesAsync_EmptyDatabase_ReturnsEmptyList()
+    {
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
+        var cancellationToken = CancellationToken.None;
+
+        // Ensure a clean database.
+        await CleanDatabaseAsync(repository);
+
+        // Act
+        var hashes = await repository.GetDistinctImageHashesAsync(cancellationToken);
+
+        // Assert
+        Assert.Empty(hashes);
+    }
+
     private static PlaybackEntry CreateEntry(DateTimeOffset startTime, DateTimeOffset? endUtc, ContentType contentType = ContentType.Movie)
     {
         return new PlaybackEntry

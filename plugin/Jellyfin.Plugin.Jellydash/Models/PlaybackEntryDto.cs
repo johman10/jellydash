@@ -78,7 +78,8 @@ public class PlaybackEntryDto(Guid itemId, Guid? parentItemId, ContentType conte
             Year = entry.Year,
             SeriesName = entry.SeriesName,
             SeasonNumber = entry.SeasonNumber,
-            EpisodeNumber = entry.EpisodeNumber
+            EpisodeNumber = entry.EpisodeNumber,
+            ItemImageHash = entry.ItemImageHash
         };
 
         var user = new UserInfoDto(entry.UserPrimaryImageTag)

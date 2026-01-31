@@ -272,4 +272,25 @@ LIMIT 1;";
             DbLock.Release();
         }
     }
+
+    /// <summary>
+    /// Gets all distinct non-null ItemImageHash values from the database.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A list of distinct image hashes.</returns>
+    public async Task<IReadOnlyList<string>> GetDistinctImageHashesAsync(CancellationToken cancellationToken)
+    {
+        await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
+            var sql = "SELECT DISTINCT ItemImageHash FROM PlaybackEntries WHERE ItemImageHash IS NOT NULL;";
+            var hashes = await connection.QueryAsync<string>(sql).ConfigureAwait(false);
+            return hashes.AsList();
+        }
+        finally
+        {
+            DbLock.Release();
+        }
+    }
 }

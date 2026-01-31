@@ -3,6 +3,7 @@ using Jellyfin.Plugin.Jellydash.Events;
 using Jellyfin.Plugin.Jellydash.Services;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Drawing;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Library;
@@ -37,5 +38,15 @@ public sealed class JellydashServiceRegistrator : IPluginServiceRegistrator
 
         // Register activity repository as a singleton service for API controllers.
         serviceCollection.AddSingleton<PlaybackEntryRepository>();
+
+        // Register image capture service as a singleton.
+        serviceCollection.AddSingleton(sp =>
+        {
+            var imageProcessor = sp.GetRequiredService<IImageProcessor>();
+            var libraryManager = sp.GetRequiredService<ILibraryManager>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ImageCaptureService>>();
+            var applicationPaths = sp.GetRequiredService<IApplicationPaths>();
+            return new ImageCaptureService(imageProcessor, libraryManager, logger, applicationPaths.DataPath);
+        });
     }
 }
