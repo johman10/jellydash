@@ -88,8 +88,8 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         var repo = new PlaybackEntryRepository(DatabaseHelper);
 
         // One very old entry and one recent entry.
-        var olderPlaybackId = await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-60));
-        var newerPlaybackId = await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-1));
+        var olderPlaybackId = await SeedEntryAsync(repo, DateTimeOffset.UtcNow.AddDays(-60));
+        var newerPlaybackId = await SeedEntryAsync(repo, DateTimeOffset.UtcNow.AddDays(-1));
 
         var fakePlugin = new FakePlugin(new PluginConfiguration
         {
@@ -115,12 +115,12 @@ public sealed class JellydashCleanupTaskTests : IDisposable
 
     private static async Task<Guid> SeedSingleEntryAsync(PlaybackEntryRepository repo)
     {
-        return await SeedEntryAsync(repo, DateTime.UtcNow.AddDays(-1));
+        return await SeedEntryAsync(repo, DateTimeOffset.UtcNow.AddDays(-1));
     }
 
-    private static async Task<Guid> SeedEntryAsync(PlaybackEntryRepository repo, DateTime endUtc)
+    private static async Task<Guid> SeedEntryAsync(PlaybackEntryRepository repo, DateTimeOffset endTime)
     {
-        var startUtc = endUtc.AddMinutes(-10);
+        var startTime = endTime.AddMinutes(-10);
         var entry = new Models.PlaybackEntry
         {
             PlaybackId = Guid.NewGuid(),
@@ -131,8 +131,8 @@ public sealed class JellydashCleanupTaskTests : IDisposable
             UserName = "User",
             ClientName = "TestClient",
             DeviceName = "TestDevice",
-            StartUtc = startUtc,
-            EndUtc = endUtc,
+            StartTime = startTime,
+            EndTime = endTime,
         };
 
         await repo.AppendAsync(entry, CancellationToken.None);

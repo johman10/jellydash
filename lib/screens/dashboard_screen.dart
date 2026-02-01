@@ -31,6 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<PlaybackEntry> _historyEntries = [];
   bool _initialLoading = true;
   CustomException? _exception;
+  int _errorCount = 0;
 
   Timer? _pollingTimer;
 
@@ -85,15 +86,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             data.items.where((entry) => entry.isCompleted == true).toList();
         _initialLoading = false;
         _exception = null;
+        _errorCount = 0;
       });
     } catch (error) {
-      if (_exception == null) {
+      // If there was an exception before, show a snackbar, but don't show a second one
+      if (_errorCount == 1) {
         _showErrorSnackBar(error as CustomException);
       }
 
       setState(() {
         _initialLoading = false;
         _exception = error as CustomException;
+        _errorCount += 1;
       });
     }
   }

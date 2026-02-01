@@ -10,12 +10,12 @@ public class TimingInfoDto
     /// <summary>
     /// Gets the UTC timestamp when playback started.
     /// </summary>
-    public DateTime StartUtc { get; init; }
+    public DateTimeOffset StartTime { get; init; }
 
     /// <summary>
     /// Gets the UTC timestamp when playback ended, if completed.
     /// </summary>
-    public DateTime? EndUtc { get; init; }
+    public DateTimeOffset? EndTime { get; init; }
 
     /// <summary>
     /// Gets the total runtime of the item in ticks.

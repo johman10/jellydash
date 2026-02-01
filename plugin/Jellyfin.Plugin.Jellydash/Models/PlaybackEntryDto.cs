@@ -96,8 +96,8 @@ public class PlaybackEntryDto(Guid itemId, Guid? parentItemId, ContentType conte
 
         var timing = new TimingInfoDto
         {
-            StartUtc = entry.StartUtc,
-            EndUtc = entry.EndUtc,
+            StartTime = entry.StartTime,
+            EndTime = entry.EndTime,
             RuntimeTicks = entry.RuntimeTicks,
             StartPositionTicks = entry.StartPositionTicks,
             EndPositionTicks = entry.EndPositionTicks,

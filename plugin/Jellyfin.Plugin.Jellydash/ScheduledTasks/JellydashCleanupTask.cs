@@ -65,7 +65,7 @@ public sealed class JellydashCleanupTask : IScheduledTask
         }
 
         var retention = TimeSpan.FromDays(retentionDays);
-        var cutoffUtc = DateTime.UtcNow - retention;
+        var cutoffUtc = DateTimeOffset.UtcNow - retention;
 
         await _playbackEntryRepository
             .DeleteOlderThanAsync(cutoffUtc, cancellationToken)
