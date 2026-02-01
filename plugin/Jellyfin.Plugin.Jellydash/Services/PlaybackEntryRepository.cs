@@ -219,6 +219,27 @@ LIMIT 1;";
     }
 
     /// <summary>
+    /// Deletes a playback entry from the database by its unique identifier.
+    /// </summary>
+    /// <param name="id">The unique identifier of the playback entry to delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A <see cref="Task{TResult}"/> representing the result of the asynchronous operation.</returns>
+    public async Task<int> DeleteByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
+            var sql = "DELETE FROM PlaybackEntries WHERE Id = @Id;";
+            return await connection.ExecuteAsync(sql, new { Id = id }).ConfigureAwait(false);
+        }
+        finally
+        {
+            DbLock.Release();
+        }
+    }
+
+    /// <summary>
     /// Deletes entries older than the specified cutoff.
     /// </summary>
     /// <param name="cutoffUtc">UTC cutoff time.</param>

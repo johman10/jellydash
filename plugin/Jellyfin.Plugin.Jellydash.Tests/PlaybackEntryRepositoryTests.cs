@@ -389,4 +389,74 @@ public class PlaybackEntryRepositoryTests
             IsCompleted = endUtc.HasValue
         };
     }
+
+    [Fact]
+    public async Task DeleteByIdAsync_ExistingEntry_DeletesEntry()
+    {
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
+        var cancellationToken = CancellationToken.None;
+
+        // Ensure a clean database.
+        await CleanDatabaseAsync(repository);
+
+        var now = DateTimeOffset.UtcNow;
+        var entry = CreateEntry(now.AddMinutes(-10), now, ContentType.Movie);
+
+        await repository.AppendAsync(entry, cancellationToken);
+
+        // Verify entry exists
+        var playbackId = entry.PlaybackId;
+        var retrieved = await repository.GetRecentlyCompletedByPlaybackIdAsync(playbackId, cancellationToken);
+        Assert.NotNull(retrieved);
+
+        // Delete the entry
+        var deletedCount = await repository.DeleteByIdAsync(retrieved.Id, cancellationToken);
+        Assert.Equal(1, deletedCount);
+
+        // Verify entry no longer exists
+        var afterDelete = await repository.GetRecentlyCompletedByPlaybackIdAsync(playbackId, cancellationToken);
+        Assert.Null(afterDelete);
+    }
+
+    [Fact]
+    public async Task DeleteByIdAsync_NonExistentEntry_ReturnsZero()
+    {
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
+        var cancellationToken = CancellationToken.None;
+
+        // Ensure a clean database.
+        await CleanDatabaseAsync(repository);
+
+        // Try to delete a non-existent entry
+        var deletedCount = await repository.DeleteByIdAsync(999999, cancellationToken);
+        Assert.Equal(0, deletedCount);
+    }
+
+    [Fact]
+    public async Task DeleteByIdAsync_IncompleteEntry_DeletesEntry()
+    {
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
+        var cancellationToken = CancellationToken.None;
+
+        // Ensure a clean database.
+        await CleanDatabaseAsync(repository);
+
+        // Create an incomplete entry (EndTime = null)
+        var entry = CreateEntry(DateTimeOffset.UtcNow.AddMinutes(-10), null, ContentType.Movie);
+
+        await repository.AppendAsync(entry, cancellationToken);
+
+        // Verify entry exists
+        var playbackId = entry.PlaybackId;
+        var retrieved = await repository.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, cancellationToken);
+        Assert.NotNull(retrieved);
+
+        // Delete the entry
+        var deletedCount = await repository.DeleteByIdAsync(retrieved.Id, cancellationToken);
+        Assert.Equal(1, deletedCount);
+
+        // Verify entry no longer exists
+        var afterDelete = await repository.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, cancellationToken);
+        Assert.Null(afterDelete);
+    }
 }
