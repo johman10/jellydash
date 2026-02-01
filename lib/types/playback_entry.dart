@@ -38,7 +38,8 @@ class ContentIdentity {
     final primaryImagePath = json['primary_image_path'] as String?;
 
     return ContentIdentity(
-      primaryImageUrl: '$baseUrl$primaryImagePath',
+      primaryImageUrl:
+          primaryImagePath != null ? '$baseUrl$primaryImagePath' : null,
       title: json['title'] as String? ?? '',
       genres: (json['genres'] as List<dynamic>?)
               ?.map((e) => e.toString())
