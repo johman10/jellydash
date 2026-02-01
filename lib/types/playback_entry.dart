@@ -34,8 +34,7 @@ class ContentIdentity {
     this.seriesName,
   });
 
-  factory ContentIdentity.fromJson(
-      String baseUrl, Map<String, dynamic> json) {
+  factory ContentIdentity.fromJson(String baseUrl, Map<String, dynamic> json) {
     final primaryImagePath = json['primary_image_path'] as String?;
 
     return ContentIdentity(
@@ -547,8 +546,7 @@ class PlaybackEntry {
     required this.isPaused,
   });
 
-  factory PlaybackEntry.fromJson(
-      String baseUrl, Map<String, dynamic> json) {
+  factory PlaybackEntry.fromJson(String baseUrl, Map<String, dynamic> json) {
     final identityJson = json['identity'] as Map<String, dynamic>?;
     final userJson = json['user'] as Map<String, dynamic>?;
     final clientJson = json['client'] as Map<String, dynamic>?;
