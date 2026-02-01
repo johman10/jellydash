@@ -2,6 +2,8 @@ using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Jellydash.Events;
 using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
+using MediaBrowser.Controller.Drawing;
+using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
@@ -33,7 +35,13 @@ public sealed class PlaybackTrackerTests
     private static PlaybackTracker CreateTracker()
     {
         var logger = Mock.Of<ILogger<PlaybackTracker>>();
-        return new PlaybackTracker(logger, DatabaseHelper);
+        var tempPath = Path.Combine(Path.GetTempPath(), "PlaybackTrackerTests");
+        var imageCaptureService = new ImageCaptureService(
+            Mock.Of<IImageProcessor>(),
+            Mock.Of<ILibraryManager>(),
+            Mock.Of<ILogger<ImageCaptureService>>(),
+            tempPath);
+        return new PlaybackTracker(logger, DatabaseHelper, imageCaptureService);
     }
 
     [Fact]
@@ -156,6 +164,12 @@ public sealed class PlaybackTrackerTests
             PlaylistItemId = Guid.NewGuid().ToString()
         };
 
+        // Create a mock BaseItem that will be used by ImageCaptureService
+        var mockItem = new Movie
+        {
+            Id = itemId,
+            Name = "Item"
+        };
 
         return new PlaybackStartEventArgs
         {
@@ -164,7 +178,8 @@ public sealed class PlaybackTrackerTests
             PlaybackPositionTicks = startPositionTicks,
             Session = session,
             ClientName = "client",
-            DeviceName = "device"
+            DeviceName = "device",
+            Item = mockItem
         };
     }
 
@@ -193,6 +208,12 @@ public sealed class PlaybackTrackerTests
             LastPlaybackCheckIn = DateTime.UtcNow
         };
 
+        // Create a mock BaseItem that will be used by ImageCaptureService
+        var mockItem = new Movie
+        {
+            Id = itemId,
+            Name = "Item"
+        };
 
         return new PlaybackStopEventArgs
         {
@@ -201,7 +222,8 @@ public sealed class PlaybackTrackerTests
             PlaybackPositionTicks = positionTicks,
             Session = session,
             ClientName = "client",
-            DeviceName = "device"
+            DeviceName = "device",
+            Item = mockItem
         };
     }
 }

@@ -71,7 +71,7 @@ public class PlaybackEntryDto(Guid itemId, Guid? parentItemId, ContentType conte
     /// <returns>A new <see cref="PlaybackEntryDto"/> instance populated from this entry.</returns>
     public static PlaybackEntryDto FromPlaybackEntry(PlaybackEntry entry)
     {
-        var identity = new ContentIdentityDto(contentType: entry.ContentType, itemId: entry.ItemId, parentItemId: entry.ParentItemId)
+        var identity = new ContentIdentityDto(contentType: entry.ContentType, itemId: entry.ItemId, parentItemId: entry.ParentItemId, itemImageHash: entry.ItemImageHash)
         {
             Title = entry.Title,
             Genres = entry.Genres,

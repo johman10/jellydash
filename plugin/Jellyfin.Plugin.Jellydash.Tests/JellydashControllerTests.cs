@@ -1,7 +1,11 @@
 using Jellyfin.Plugin.Jellydash.Controllers;
 using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
+using MediaBrowser.Controller.Drawing;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
@@ -25,11 +29,22 @@ public sealed class JellydashControllerTests
         return repo;
     }
 
+    private static ImageCaptureService CreateMockImageCaptureService()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), "JellydashControllerTests");
+        return new ImageCaptureService(
+            new Mock<IImageProcessor>().Object,
+            new Mock<ILibraryManager>().Object,
+            new Mock<ILogger<ImageCaptureService>>().Object,
+            tempPath);
+    }
+
     [Fact]
     public async Task GetActivity_InvalidCursor_ReturnsBadRequest()
     {
         var repo = await CreateRepositoryAsync();
-        var controller = new JellydashController(repo);
+        var imageCaptureService = CreateMockImageCaptureService();
+        var controller = new JellydashController(repo, imageCaptureService);
 
         var result = await controller.GetActivity(null, "not-a-valid-cursor", false, CancellationToken.None);
 
@@ -66,7 +81,8 @@ public sealed class JellydashControllerTests
             await repo.AppendAsync(entry, CancellationToken.None);
         }
 
-        var controller = new JellydashController(repo);
+        var imageCaptureService = CreateMockImageCaptureService();
+        var controller = new JellydashController(repo, imageCaptureService);
 
         var result = await controller.GetActivity(null, null, false, CancellationToken.None);
 
@@ -109,7 +125,8 @@ public sealed class JellydashControllerTests
             await repo.AppendAsync(entry, CancellationToken.None);
         }
 
-        var controller = new JellydashController(repo);
+        var imageCaptureService = CreateMockImageCaptureService();
+        var controller = new JellydashController(repo, imageCaptureService);
 
         // First page with explicit small limit.
         var firstResult = await controller.GetActivity(2, null, false, CancellationToken.None);
@@ -192,7 +209,8 @@ public sealed class JellydashControllerTests
             await repo.AppendAsync(entry, CancellationToken.None);
         }
 
-        var controller = new JellydashController(repo);
+        var imageCaptureService = CreateMockImageCaptureService();
+        var controller = new JellydashController(repo, imageCaptureService);
 
         // Call GetActivity with includeActive=true.
         var result = await controller.GetActivity(10, null, true, CancellationToken.None);

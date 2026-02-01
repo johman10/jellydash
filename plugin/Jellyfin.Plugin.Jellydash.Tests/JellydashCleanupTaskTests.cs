@@ -1,6 +1,10 @@
 using Jellyfin.Plugin.Jellydash.Configuration;
 using Jellyfin.Plugin.Jellydash.ScheduledTasks;
 using Jellyfin.Plugin.Jellydash.Services;
+using MediaBrowser.Controller.Drawing;
+using MediaBrowser.Controller.Library;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace Jellyfin.Plugin.Jellydash.Tests;
 
@@ -9,6 +13,7 @@ public sealed class JellydashCleanupTaskTests : IDisposable
 {
     private readonly Plugin? _originalPluginInstance;
     private readonly DatabaseHelper DatabaseHelper;
+    private readonly string _testImagesPath;
 
     public JellydashCleanupTaskTests()
     {
@@ -20,6 +25,9 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         Directory.CreateDirectory(tempRoot);
         DatabaseHelper = new DatabaseHelper(Path.Combine(tempRoot, "activity_cleanup.db"));
         DatabaseHelper.Initialize();
+
+        _testImagesPath = Path.Combine(tempRoot, "cleanup_images");
+        Directory.CreateDirectory(Path.Combine(_testImagesPath, "plugins", "Jellydash", "images"));
     }
 
     public void Dispose()
@@ -28,6 +36,13 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         typeof(Plugin)
             .GetProperty("Instance")!
             .SetValue(null, _originalPluginInstance);
+
+        // Clean up test images
+        var imagesDir = Path.Combine(_testImagesPath, "plugins", "Jellydash", "images");
+        if (Directory.Exists(imagesDir))
+        {
+            Directory.Delete(imagesDir, true);
+        }
     }
 
     [Fact]
@@ -38,7 +53,8 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         typeof(Plugin).GetProperty("Instance")!.SetValue(null, null);
 
         var repo = new PlaybackEntryRepository(DatabaseHelper);
-        var task = new JellydashCleanupTask(repo);
+        var imageCaptureService = CreateMockImageCaptureService();
+        var task = new JellydashCleanupTask(repo, imageCaptureService);
 
         var progress = new TestProgress();
 
@@ -66,7 +82,8 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         });
         typeof(Plugin).GetProperty("Instance")!.SetValue(null, fakePlugin);
 
-        var task = new JellydashCleanupTask(repo);
+        var imageCaptureService = CreateMockImageCaptureService();
+        var task = new JellydashCleanupTask(repo, imageCaptureService);
         var progress = new TestProgress();
 
         var beforeEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, CancellationToken.None);
@@ -98,7 +115,8 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         });
         typeof(Plugin).GetProperty("Instance")!.SetValue(null, fakePlugin);
 
-        var task = new JellydashCleanupTask(repo);
+        var imageCaptureService = CreateMockImageCaptureService();
+        var task = new JellydashCleanupTask(repo, imageCaptureService);
         var progress = new TestProgress();
 
         // Act
@@ -111,6 +129,69 @@ public sealed class JellydashCleanupTaskTests : IDisposable
         // Assert: no entries older than the retention window remain.
         var olderEntry = await repo.GetRecentlyIncompletedByPlaybackIdAsync(olderPlaybackId, CancellationToken.None);
         Assert.Null(olderEntry);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_OrphanedImages_DeletesUnreferencedImages()
+    {
+        // Arrange
+        var repo = new PlaybackEntryRepository(DatabaseHelper);
+        var imageCaptureService = new ImageCaptureService(
+            new Mock<IImageProcessor>().Object,
+            new Mock<ILibraryManager>().Object,
+            new Mock<ILogger<ImageCaptureService>>().Object,
+            _testImagesPath);
+
+        var imagesDir = Path.Combine(_testImagesPath, "plugins", "Jellydash", "images");
+
+        // Create test images with valid SHA256 hashes (64 hex characters)
+        var referencedHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        var orphanedHash = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+        File.WriteAllText(Path.Combine(imagesDir, $"{referencedHash}.jpg"), "referenced");
+        File.WriteAllText(Path.Combine(imagesDir, $"{orphanedHash}.jpg"), "orphaned");
+
+        // Create entry referencing only one image
+        var entry = new Models.PlaybackEntry
+        {
+            PlaybackId = Guid.NewGuid(),
+            ItemId = Guid.NewGuid(),
+            ContentType = Models.ContentType.Movie,
+            Title = "Item",
+            UserId = Guid.NewGuid(),
+            UserName = "User",
+            ClientName = "TestClient",
+            DeviceName = "TestDevice",
+            StartTime = DateTimeOffset.UtcNow.AddMinutes(-10),
+            EndTime = DateTimeOffset.UtcNow.AddMinutes(-5),
+            ItemImageHash = referencedHash
+        };
+        await repo.AppendAsync(entry, CancellationToken.None);
+
+        var fakePlugin = new FakePlugin(new PluginConfiguration
+        {
+            EnableRetention = true,
+            RetentionDays = 30
+        });
+        typeof(Plugin).GetProperty("Instance")!.SetValue(null, fakePlugin);
+
+        var task = new JellydashCleanupTask(repo, imageCaptureService);
+        var progress = new TestProgress();
+
+        // Act
+        await task.ExecuteAsync(progress, CancellationToken.None);
+
+        // Assert
+        Assert.True(File.Exists(Path.Combine(imagesDir, $"{referencedHash}.jpg")));
+        Assert.False(File.Exists(Path.Combine(imagesDir, $"{orphanedHash}.jpg")));
+    }
+
+    private ImageCaptureService CreateMockImageCaptureService()
+    {
+        return new ImageCaptureService(
+            new Mock<IImageProcessor>().Object,
+            new Mock<ILibraryManager>().Object,
+            new Mock<ILogger<ImageCaptureService>>().Object,
+            _testImagesPath);
     }
 
     private static async Task<Guid> SeedSingleEntryAsync(PlaybackEntryRepository repo)

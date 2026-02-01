@@ -27,7 +27,7 @@ class JellyDashApiService extends ApiService {
     } else if (response.statusCode == 401) {
       throw UnauthorizedException();
     } else {
-      throw Exception('Failed to load activity: ${response.statusCode}');
+      throw NetworkException(NetworkExceptionType.unknown);
     }
   }
 }

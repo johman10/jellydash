@@ -92,6 +92,13 @@ public class PlaybackEntry
     /// </summary>
     public string? UserPrimaryImageTag { get; set; }
 
+    // Images
+
+    /// <summary>
+    /// Gets or sets the SHA256 hash of the cached item image, if captured.
+    /// </summary>
+    public string? ItemImageHash { get; set; }
+
     // Client
 
     /// <summary>
@@ -286,10 +293,11 @@ public class PlaybackEntry
     /// <param name="eventArgs">
     /// The playback start event containing media, user, client, and initial play state information.
     /// </param>
+    /// <param name="imageHash">The hash of the captured image for the playback item.</param>
     /// <returns>
     /// A <see cref="PlaybackEntry"/> initialized from the event and marked as an in-progress start.
     /// </returns>
-    public static PlaybackEntry FromStartEvent(PlaybackStartEventArgs eventArgs)
+    public static PlaybackEntry FromStartEvent(PlaybackStartEventArgs eventArgs, string? imageHash)
     {
         var entry = FromEvent(eventArgs);
         // For start events, set the start time and initial position.
@@ -299,6 +307,7 @@ public class PlaybackEntry
         entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsPaused = false;
         entry.EndTime = null;
+        entry.ItemImageHash = imageHash;
         return entry;
     }
 
@@ -312,10 +321,13 @@ public class PlaybackEntry
     /// <param name="eventArgs">
     /// The playback progress event containing the current playback position and state.
     /// </param>
+    /// <param name="imageHash">
+    /// The hash of the captured image for the playback item.
+    /// </param>
     /// <returns>
     /// A <see cref="PlaybackEntry"/> initialized from the event and updated with the latest position.
     /// </returns>
-    public static PlaybackEntry FromProgressEvent(PlaybackEntry? existing, PlaybackProgressEventArgs eventArgs)
+    public static PlaybackEntry FromProgressEvent(PlaybackEntry? existing, PlaybackProgressEventArgs eventArgs, string? imageHash)
     {
         var entry = FromEvent(eventArgs);
         // For progress events, set the current position.
@@ -325,6 +337,7 @@ public class PlaybackEntry
         entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsPaused = eventArgs.IsPaused;
         entry.EndTime = null;
+        entry.ItemImageHash = existing?.ItemImageHash ?? imageHash ?? null;
         return entry;
     }
 
@@ -338,10 +351,13 @@ public class PlaybackEntry
     /// <param name="eventArgs">
     /// The playback stop event containing the final playback position and state.
     /// </param>
+    /// <param name="imageHash">
+    /// The hash of the captured image for the playback item.
+    /// </param>
     /// <returns>
     /// A <see cref="PlaybackEntry"/> initialized from the event and marked as completed.
     /// </returns>
-    public static PlaybackEntry FromStopEvent(PlaybackEntry? existing, PlaybackStopEventArgs eventArgs)
+    public static PlaybackEntry FromStopEvent(PlaybackEntry? existing, PlaybackStopEventArgs eventArgs, string? imageHash)
     {
         var entry = existing ?? FromEvent(eventArgs);
         // For stop events, set the end time and final position.
@@ -351,6 +367,7 @@ public class PlaybackEntry
         entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsPaused = false;
         entry.EndTime = eventArgs.Session.LastPlaybackCheckIn;
+        entry.ItemImageHash = existing?.ItemImageHash ?? imageHash ?? null;
         return entry;
     }
 
@@ -371,8 +388,6 @@ public class PlaybackEntry
         entry.EndTime = eventArgs.Argument.LastPlaybackCheckIn;
 
         // Clear transcoding info as playback has ended. This matches the behavior in FromStopEvent.
-        entry.IsAudioDirect = true;
-        entry.IsVideoDirect = true;
         entry.TranscodeBitrate = null;
         entry.HardwareAcceleration = null;
         entry.TranscodedVideoCodec = null;
@@ -406,15 +421,6 @@ public class PlaybackEntry
     /// <returns>This <see cref="PlaybackEntry"/> instance after being populated from the event arguments.</returns>
     private static PlaybackEntry FromEvent(PlaybackProgressEventArgs eventArgs)
     {
-        // Console.WriteLine($"Full event {JsonSerializer.Serialize(eventArgs)}");
-
-        var contentType = eventArgs.MediaInfo.Type switch
-        {
-            BaseItemKind.Movie => ContentType.Movie,
-            BaseItemKind.Episode => ContentType.Episode,
-            _ => ContentType.Other
-        };
-
         var videoStream = eventArgs.MediaInfo.MediaStreams?
             .FirstOrDefault(s => s.Type == MediaStreamType.Video);
         var audioStream = eventArgs.MediaInfo.MediaStreams?
@@ -427,7 +433,7 @@ public class PlaybackEntry
             PlaybackId = GeneratePlaybackId(eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id),
             ItemId = eventArgs.MediaInfo.Id,
             ParentItemId = eventArgs.MediaInfo.ParentId,
-            ContentType = contentType,
+            ContentType = ContentTypeExtensions.FromBaseItemKind(eventArgs.MediaInfo.Type),
             Title = eventArgs.MediaInfo.Name,
             Genres = eventArgs.MediaInfo.Genres != null ? new Collection<string>(eventArgs.MediaInfo.Genres) : [],
             Year = eventArgs.MediaInfo.ProductionYear,

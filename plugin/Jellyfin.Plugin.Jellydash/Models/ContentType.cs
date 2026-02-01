@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using Jellyfin.Data.Enums;
 
 namespace Jellyfin.Plugin.Jellydash.Models;
 
@@ -24,4 +25,27 @@ public enum ContentType
     /// </summary>
     [EnumMember(Value = "Other")]
     Other,
+}
+
+#pragma warning disable SA1649 // File name should match first type name
+/// <summary>
+/// Extension methods for the <see cref="ContentType"/> enum.
+/// </summary>
+public static class ContentTypeExtensions
+#pragma warning restore SA1649 // File name should match first type name
+{
+    /// <summary>
+    /// Maps a <see cref="BaseItemKind"/> to a <see cref="ContentType"/>.
+    /// </summary>
+    /// <param name="itemKind">The base item kind to map.</param>
+    /// <returns>The corresponding <see cref="ContentType"/> value.</returns>
+    public static ContentType FromBaseItemKind(this BaseItemKind itemKind)
+    {
+        return itemKind switch
+        {
+            BaseItemKind.Movie => ContentType.Movie,
+            BaseItemKind.Episode => ContentType.Episode,
+            _ => ContentType.Other
+        };
+    }
 }

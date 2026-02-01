@@ -14,14 +14,19 @@ namespace Jellyfin.Plugin.Jellydash.ScheduledTasks;
 public sealed class JellydashCleanupTask : IScheduledTask
 {
     private readonly PlaybackEntryRepository _playbackEntryRepository;
+    private readonly ImageCaptureService _imageCaptureService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JellydashCleanupTask"/> class.
     /// </summary>
     /// <param name="playbackEntryRepository">The playback entry repository.</param>
-    public JellydashCleanupTask(PlaybackEntryRepository playbackEntryRepository)
+    /// <param name="imageCaptureService">The image capture service.</param>
+    public JellydashCleanupTask(
+        PlaybackEntryRepository playbackEntryRepository,
+        ImageCaptureService imageCaptureService)
     {
         _playbackEntryRepository = playbackEntryRepository;
+        _imageCaptureService = imageCaptureService;
     }
 
     /// <inheritdoc />
@@ -70,6 +75,25 @@ public sealed class JellydashCleanupTask : IScheduledTask
         await _playbackEntryRepository
             .DeleteOlderThanAsync(cutoffUtc, cancellationToken)
             .ConfigureAwait(false);
+
+        progress.Report(0.5);
+
+        // Clean up orphaned images
+        var referencedHashes = await _playbackEntryRepository
+            .GetDistinctImageHashesAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var referencedHashSet = new HashSet<string>(referencedHashes, StringComparer.OrdinalIgnoreCase);
+        var allImagePaths = _imageCaptureService.GetAllImagePaths();
+
+        foreach (var imagePath in allImagePaths)
+        {
+            var fileName = System.IO.Path.GetFileNameWithoutExtension(imagePath);
+            if (!referencedHashSet.Contains(fileName))
+            {
+                _imageCaptureService.DeleteImage(fileName);
+            }
+        }
 
         // Simple progress model: once delete returns, task is done.
         progress.Report(1);
