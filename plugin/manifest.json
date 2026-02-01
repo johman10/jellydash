@@ -8,6 +8,14 @@
     "overview": "Jellydash provides real-time activity tracking and a dashboard view for your Jellyfin server. Monitor current playback sessions, view recent activity, and get insights into media usage.",
     "versions": [
       {
+        "version": "0.0.2",
+        "changelog": "## What's Changed\n* Improve date handling by @johman10 in https://github.com/johman10/jellydash/pull/16\n* Improve image handling by @johman10 in https://github.com/johman10/jellydash/pull/17\n* Optimize progress handling by @johman10 in https://github.com/johman10/jellydash/pull/18\n\n\n**Full Changelog**: https://github.com/johman10/jellydash/compare/v0.0.1...v0.0.2",
+        "targetAbi": "10.11.5",
+        "sourceUrl": "https://github.com/johman10/jellydash/releases/download/v0.0.2/jellydash-plugin-0.0.2.zip",
+        "checksum": "ab35c5a87a7549d3dc435cd9ed75c63c",
+        "timestamp": "2026-02-01 15:24:24"
+      },
+      {
         "version": "0.0.1",
         "changelog": "## What's Changed\n* Add release pipeline by @johman10 in https://github.com/johman10/jellydash/pull/12\n* Add app integration with Jellydash plugin by @johman10 in https://github.com/johman10/jellydash/pull/11\n* Fix: Release pipeline by @johman10 in https://github.com/johman10/jellydash/pull/13\n* Fix: release pipeline by @johman10 in https://github.com/johman10/jellydash/pull/14\n* Fix: Release pipeline - detached head by @johman10 in https://github.com/johman10/jellydash/pull/15\n\n\n**Full Changelog**: https://github.com/johman10/jellydash/commits/v0.0.1",
         "targetAbi": "10.11.5",
