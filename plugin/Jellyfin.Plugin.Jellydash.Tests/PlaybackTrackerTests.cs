@@ -208,6 +208,12 @@ public sealed class PlaybackTrackerTests
             LastPlaybackCheckIn = DateTime.UtcNow
         };
 
+        // Create a mock BaseItem that will be used by ImageCaptureService
+        var mockItem = new Movie
+        {
+            Id = itemId,
+            Name = "Item"
+        };
 
         return new PlaybackStopEventArgs
         {
@@ -216,7 +222,8 @@ public sealed class PlaybackTrackerTests
             PlaybackPositionTicks = positionTicks,
             Session = session,
             ClientName = "client",
-            DeviceName = "device"
+            DeviceName = "device",
+            Item = mockItem
         };
     }
 }

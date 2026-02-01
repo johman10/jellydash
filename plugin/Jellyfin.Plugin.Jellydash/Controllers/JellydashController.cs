@@ -122,7 +122,7 @@ namespace Jellyfin.Plugin.Jellydash.Controllers
         /// <param name="hash">The SHA256 hash of the image.</param>
         /// <returns>The image file or 404 if not found.</returns>
         [HttpGet("images/{hash}")]
-        [Authorize]
+        [AllowAnonymous]
         public IActionResult GetImage([FromRoute] string hash)
         {
             if (string.IsNullOrWhiteSpace(hash))

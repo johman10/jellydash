@@ -6,13 +6,8 @@ namespace Jellyfin.Plugin.Jellydash.Models;
 /// <summary>
 /// Represents the identity and display metadata for a media item.
 /// </summary>
-public class ContentIdentityDto(ContentType contentType, Guid itemId, Guid? parentItemId)
+public class ContentIdentityDto(ContentType contentType, Guid itemId, Guid? parentItemId, string? itemImageHash)
 {
-    /// <summary>
-    /// Gets the SHA256 hash of the cached item image, if available.
-    /// </summary>
-    public string? ItemImageHash { get; init; }
-
     /// <summary>
     /// Gets the relative path to the primary image.
     /// </summary>
@@ -20,7 +15,11 @@ public class ContentIdentityDto(ContentType contentType, Guid itemId, Guid? pare
     {
         get
         {
-            if (contentType == ContentType.Episode)
+            if (itemImageHash != null)
+            {
+                return $"/Jellydash/images/{itemImageHash}";
+            }
+            else if (contentType == ContentType.Episode)
             {
                 return $"/Items/{parentItemId}/Images/Primary";
             }

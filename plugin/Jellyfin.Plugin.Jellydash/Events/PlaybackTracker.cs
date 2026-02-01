@@ -56,13 +56,9 @@ public class PlaybackTracker :
                 return;
             }
 
-            var entry = PlaybackEntry.FromStartEvent(eventArgs);
-
-            // Capture and cache the item image
-            var imageHash = await _imageCaptureService.CaptureImageAsync(eventArgs.Item, entry.ContentType, default).ConfigureAwait(false);
-            entry.ItemImageHash = imageHash;
-
-            _logger.LogDebug("Recording playback start event for Jellydash activity: {@Entry}", entry.ItemImageHash);
+            var contentType = ContentTypeExtensions.FromBaseItemKind(media.Type);
+            var imageHash = await _imageCaptureService.CaptureImageAsync(eventArgs.Item, contentType, default).ConfigureAwait(false);
+            var entry = PlaybackEntry.FromStartEvent(eventArgs, imageHash);
 
             await _repository.AppendAsync(entry, default).ConfigureAwait(false);
         }
@@ -85,7 +81,14 @@ public class PlaybackTracker :
 
             var playbackId = PlaybackEntry.GeneratePlaybackId(eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id);
             var existing = await _repository.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, default).ConfigureAwait(false);
-            var entry = PlaybackEntry.FromProgressEvent(existing, eventArgs);
+            string? imageHash = null;
+            if (existing?.ItemImageHash is null)
+            {
+                var contentType = ContentTypeExtensions.FromBaseItemKind(media.Type);
+                imageHash = await _imageCaptureService.CaptureImageAsync(eventArgs.Item, contentType, default).ConfigureAwait(false);
+            }
+
+            var entry = PlaybackEntry.FromProgressEvent(existing, eventArgs, imageHash);
             await _repository.Upsert(entry, default).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -107,7 +110,14 @@ public class PlaybackTracker :
 
             var playbackId = PlaybackEntry.GeneratePlaybackId(eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id);
             var existing = await _repository.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, default).ConfigureAwait(false);
-            var entry = PlaybackEntry.FromStopEvent(existing, eventArgs);
+            string? imageHash = null;
+            if (existing?.ItemImageHash is null)
+            {
+                var contentType = ContentTypeExtensions.FromBaseItemKind(media.Type);
+                imageHash = await _imageCaptureService.CaptureImageAsync(eventArgs.Item, contentType, default).ConfigureAwait(false);
+            }
+
+            var entry = PlaybackEntry.FromStopEvent(existing, eventArgs, imageHash);
             await _repository.Upsert(entry, default).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -136,7 +146,7 @@ public class PlaybackTracker :
             }
 
             var entry = PlaybackEntry.FromSessionEndedEvent(existing, eventArgs);
-            await _repository.Upsert(existing, default).ConfigureAwait(false);
+            await _repository.Upsert(entry, default).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

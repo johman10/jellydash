@@ -132,6 +132,7 @@ namespace Jellyfin.Plugin.Jellydash.Constants
             UserId = @UserId,
             UserName = @UserName,
             UserPrimaryImageTag = @UserPrimaryImageTag,
+            ItemImageHash = @ItemImageHash,
             ClientName = @ClientName,
             DeviceName = @DeviceName,
             DeviceId = @DeviceId,
