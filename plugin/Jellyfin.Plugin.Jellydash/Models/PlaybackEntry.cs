@@ -1,14 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace Jellyfin.Plugin.Jellydash.Models;
 
@@ -354,17 +351,25 @@ public class PlaybackEntry
     /// <param name="imageHash">
     /// The hash of the captured image for the playback item.
     /// </param>
+    /// <param name="maxResumePct">
+    /// The maximum resume percentage threshold from Jellyfin configuration.
+    /// </param>
     /// <returns>
-    /// A <see cref="PlaybackEntry"/> initialized from the event and marked as completed.
+    /// A <see cref="PlaybackEntry"/> initialized from the event and conditionally marked as completed based on thresholds.
     /// </returns>
-    public static PlaybackEntry FromStopEvent(PlaybackEntry? existing, PlaybackStopEventArgs eventArgs, string? imageHash)
+    public static PlaybackEntry FromStopEvent(
+        PlaybackEntry? existing,
+        PlaybackStopEventArgs eventArgs,
+        string? imageHash,
+        int? maxResumePct)
     {
         var entry = existing ?? FromEvent(eventArgs);
         // For stop events, set the end time and final position.
         entry.StartTime = existing?.StartTime ?? DateTimeOffset.UtcNow;
         entry.StartPositionTicks = existing?.StartPositionTicks ?? 0;
+        var endPosition = eventArgs.PlaybackPositionTicks ?? 0;
+        entry.EndPositionTicks = NormalizeEndPosition(endPosition, entry.RuntimeTicks, maxResumePct);
         entry.IsCompleted = true;
-        entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsPaused = false;
         entry.EndTime = eventArgs.Session.LastPlaybackCheckIn;
         entry.ItemImageHash = existing?.ItemImageHash ?? imageHash ?? null;
@@ -376,13 +381,20 @@ public class PlaybackEntry
     /// </summary>
     /// <param name="existing">The existing <see cref="PlaybackEntry"/> to update.</param>
     /// <param name="eventArgs">The session ended event containing the final playback state and timestamp.</param>
+    /// <param name="maxResumePct">
+    /// The maximum resume percentage threshold from Jellyfin configuration.
+    /// </param>
     /// <returns>
-    /// The updated <see cref="PlaybackEntry"/> marked as completed and with the final playback position and end time.
+    /// The updated <see cref="PlaybackEntry"/> conditionally marked as completed based on thresholds and with the final playback position and end time.
     /// </returns>
-    public static PlaybackEntry FromSessionEndedEvent(PlaybackEntry existing, SessionEndedEventArgs eventArgs)
+    public static PlaybackEntry FromSessionEndedEvent(
+        PlaybackEntry existing,
+        SessionEndedEventArgs eventArgs,
+        int? maxResumePct)
     {
         var entry = existing;
-        entry.EndPositionTicks = eventArgs.Argument.PlayState?.PositionTicks ?? existing.EndPositionTicks;
+        var endPosition = eventArgs.Argument.PlayState?.PositionTicks ?? existing.EndPositionTicks;
+        entry.EndPositionTicks = NormalizeEndPosition(endPosition, entry.RuntimeTicks, maxResumePct);
         entry.IsPaused = false;
         entry.IsCompleted = true;
         entry.EndTime = eventArgs.Argument.LastPlaybackCheckIn;
@@ -396,6 +408,83 @@ public class PlaybackEntry
         entry.TranscodeReasonsJson = null;
         entry.TranscodeCompletionPercentage = null;
         return entry;
+    }
+
+    /// <summary>
+    /// Determines whether a playback entry should be marked as completed based on Jellyfin's resume percentage thresholds.
+    /// </summary>
+    /// <param name="minResumePct">The minimum resume percentage threshold (0-100). If null or zero, any progress marks as completed.</param>
+    /// <returns>True if the playback should be marked as completed; otherwise, false.</returns>
+    /// <remarks>
+    /// If RuntimeTicks is null or zero (e.g., live TV or unknown duration), always returns true.
+    /// If MinResumePct is null or zero, any playback progress marks as completed.
+    /// Otherwise, completion requires the actual watched duration (EndPositionTicks - StartPositionTicks) as a percentage of RuntimeTicks to be >= MinResumePct.
+    /// </remarks>
+    public bool ShouldTrackInHistory(int? minResumePct)
+    {
+        // If we don't have valid runtime, mark as completed (live TV / unknown duration).
+        if (!RuntimeTicks.HasValue || RuntimeTicks.Value <= 0)
+        {
+            return true;
+        }
+
+        // If we don't have a valid end position, cannot be completed.
+        if (!EndPositionTicks.HasValue)
+        {
+            return false;
+        }
+
+        // If minimum threshold is null or zero, any playback marks as completed.
+        int minThreshold = minResumePct ?? 0;
+        if (minThreshold <= 0)
+        {
+            return true;
+        }
+
+        // Calculate the actual watched duration and compare to minimum threshold.
+        long watchedDuration = EndPositionTicks.Value - (StartPositionTicks ?? 0);
+        double percentage = (double)watchedDuration / RuntimeTicks.Value * 100.0;
+        return percentage >= minThreshold;
+    }
+
+    /// <summary>
+    /// Normalizes the end position to the runtime when the maximum resume percentage threshold is exceeded.
+    /// </summary>
+    /// <param name="endPositionTicks">The final playback position in ticks.</param>
+    /// <param name="runtimeTicks">The total runtime of the item in ticks.</param>
+    /// <param name="maxResumePct">The maximum resume percentage threshold (0-100). If null or zero, no normalization occurs.</param>
+    /// <returns>The normalized end position in ticks.</returns>
+    /// <remarks>
+    /// When playback exceeds MaxResumePct, the position is clamped to RuntimeTicks to indicate full completion.
+    /// If RuntimeTicks is null or zero, returns the original EndPositionTicks.
+    /// If MaxResumePct is null or zero, returns the original EndPositionTicks.
+    /// </remarks>
+    private static long? NormalizeEndPosition(
+        long? endPositionTicks,
+        long? runtimeTicks,
+        int? maxResumePct)
+    {
+        // If we don't have valid runtime or position, return as-is.
+        if (!runtimeTicks.HasValue || runtimeTicks.Value <= 0 || !endPositionTicks.HasValue)
+        {
+            return endPositionTicks;
+        }
+
+        // If maximum threshold is null or zero, no normalization needed.
+        int maxThreshold = maxResumePct ?? 0;
+        if (maxThreshold <= 0)
+        {
+            return endPositionTicks;
+        }
+
+        // If watch percentage exceeds maximum, clamp to runtime.
+        double percentage = (double)endPositionTicks.Value / runtimeTicks.Value * 100.0;
+        if (percentage >= maxThreshold)
+        {
+            return runtimeTicks.Value;
+        }
+
+        return endPositionTicks;
     }
 
     /// <summary>

@@ -1,16 +1,13 @@
 using System;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Jellydash.Models;
 using Jellyfin.Plugin.Jellydash.Services;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Events;
 using MediaBrowser.Controller.Events.Session;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
-using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Jellydash.Events;
@@ -27,6 +24,7 @@ public class PlaybackTracker :
     private readonly ILogger<PlaybackTracker> _logger;
     private readonly PlaybackEntryRepository _repository;
     private readonly ImageCaptureService _imageCaptureService;
+    private readonly IServerConfigurationManager _configurationManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlaybackTracker"/> class.
@@ -34,14 +32,17 @@ public class PlaybackTracker :
     /// <param name="logger">Logger instance.</param>
     /// <param name="databaseHelper">DatabaseHelper instance.</param>
     /// <param name="imageCaptureService">Image capture service.</param>
+    /// <param name="configurationManager">Server configuration manager for accessing resume percentage thresholds.</param>
     public PlaybackTracker(
         ILogger<PlaybackTracker> logger,
         DatabaseHelper databaseHelper,
-        ImageCaptureService imageCaptureService)
+        ImageCaptureService imageCaptureService,
+        IServerConfigurationManager configurationManager)
     {
         _logger = logger;
         _repository = new PlaybackEntryRepository(databaseHelper);
         _imageCaptureService = imageCaptureService;
+        _configurationManager = configurationManager;
     }
 
     /// <inheritdoc />
@@ -117,8 +118,17 @@ public class PlaybackTracker :
                 imageHash = await _imageCaptureService.CaptureImageAsync(eventArgs.Item, contentType, default).ConfigureAwait(false);
             }
 
-            var entry = PlaybackEntry.FromStopEvent(existing, eventArgs, imageHash);
-            await _repository.Upsert(entry, default).ConfigureAwait(false);
+            var minResumePct = _configurationManager.Configuration.MinResumePct;
+            var maxResumePct = _configurationManager.Configuration.MaxResumePct;
+            var entry = PlaybackEntry.FromStopEvent(existing, eventArgs, imageHash, maxResumePct);
+            if (entry.ShouldTrackInHistory(minResumePct))
+            {
+                await _repository.Upsert(entry, default).ConfigureAwait(false);
+            }
+            else if (existing is not null)
+            {
+                await _repository.DeleteByIdAsync(existing.Id, default).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
@@ -145,8 +155,17 @@ public class PlaybackTracker :
                 return;
             }
 
-            var entry = PlaybackEntry.FromSessionEndedEvent(existing, eventArgs);
-            await _repository.Upsert(entry, default).ConfigureAwait(false);
+            var minResumePct = _configurationManager.Configuration.MinResumePct;
+            var maxResumePct = _configurationManager.Configuration.MaxResumePct;
+            var entry = PlaybackEntry.FromSessionEndedEvent(existing, eventArgs, maxResumePct);
+            if (entry.ShouldTrackInHistory(minResumePct))
+            {
+                await _repository.Upsert(entry, default).ConfigureAwait(false);
+            }
+            else
+            {
+                await _repository.DeleteByIdAsync(existing.Id, default).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {

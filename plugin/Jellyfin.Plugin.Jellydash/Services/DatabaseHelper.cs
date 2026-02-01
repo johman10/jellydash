@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Threading;
 using Dapper;
 using Jellyfin.Plugin.Jellydash.TypeMappers;
 using Microsoft.Data.Sqlite;
