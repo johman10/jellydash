@@ -39,6 +39,7 @@ Jellydash is a dashboard for [Jellyfin](https://jellyfin.org/), providing a real
 - When handling API errors, log the error and display a concise message to the user.
  - When updating activity-related UI (e.g., remaining time, pause overlays, bitrate display), keep `Session` semantics consistent and update the corresponding tests in `test/widgets/current_activity_card_test.dart` and `test/widgets/current_activities_test.dart`.
  - When changing playback tracking or history semantics in the plugin, also update `plugin/README.md` and the repository tests under `plugin/Jellyfin.Plugin.Jellydash.Tests` to document and enforce the expected behavior (especially completed vs ongoing entries and `PlaybackId` generation and usage).
+ - When modifying the PlaybackEntry database structure, always update together: (1) Database migration SQL in `plugin/Jellyfin.Plugin.Jellydash/Migrations/`, (2) `PlaybackEntry` model properties in `plugin/Jellyfin.Plugin.Jellydash/Models/PlaybackEntry.cs`, (3) All three constants in `plugin/Jellyfin.Plugin.Jellydash/Constants/PlaybackEntryConstants.cs` (`Columns`, `Parameters`, `UpdateSetClause`), and (4) the `FromEvent` method to populate new fields. This ensures model, SQL queries via Dapper, and database schema remain synchronized.
 
 ## Notes
 - No separate backend beyond the Jellydash Jellyfin plugin: the Flutter app calls Jellyfin (core + plugin) directly.
