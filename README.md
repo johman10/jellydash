@@ -7,12 +7,10 @@ desktop, tablet, and mobile.
 
 ## Features
 
-- Live list of active Jellyfin sessions with per‑user cards.
-- Shows title, season/episode or year, remaining time, and estimated completion time.
-- Visual indicators for transcoding (separate video/audio badges) and stream bitrate.
-- User avatar circle with fallback to user initial when no image is available.
-- Responsive layout that adapts card columns to available width.
-- Light and dark themes using standard Flutter theming.
+- **Real-time monitoring**: See exactly who's watching what on your Jellyfin server at a glance.
+- **Rich playback details**: Track what's being streamed, how far users have progressed, and when they'll finish.
+- **Performance insights**: Instantly identify transcoding sessions and bandwidth usage.
+- **Cross-platform**: Works seamlessly on web, desktop, and mobile devices.
 
 ## How It Works
 
@@ -86,10 +84,3 @@ To help with faster debugging Jellydash also support build time environment vari
 	```bash
 	dotnet test Jellyfin.Plugin.Jellydash.sln
 	```
-
-- Key widgets to be aware of:
-  - `lib/widgets/current_activities.dart` – responsive layout of activity cards.
-  - `lib/widgets/current_activity_card.dart` – individual session card UI.
-
-When adding new features, prefer small, focused widgets and add matching tests in the
-`test/widgets` directory to cover layout and key text/indicator behaviour.

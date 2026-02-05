@@ -66,6 +66,7 @@ High‑level pieces:
 - **Playback history model**
 	- `Models/PlaybackEntry.cs` defines a single contiguous playback span for a user and item as it is stored in SQLite.
 	- Each span is keyed by a generated `PlaybackId`, which is a GUID derived from the Jellyfin session ID, playlist item ID, and item ID. Doesn't ensure uniqueness, but is the best available. Once a PlaybackEntry is marked as completed it will no longer be updated to minimise the impact of the non-uniqueness.
+	- To facilitate debugging of PlaybackId changes, the individual components used to generate the PlaybackId (`SessionId`, `PlaylistItemId`, and `ItemId`) are now stored separately in the database. This allows identification of which source value changed when PlaybackId unexpectedly changes between events.
 	- `Models/PlaybackEntryDto.cs` and related DTOs (for identity, user, client, timing, streams, and transcoding) define the API shape returned to the Jellydash UI.
 	- Fields are chosen to map cleanly onto the Flutter `Session` / `CurrentActivityCard` UI: user id + name, item title/series/season/episode/year, client + device, span start/end, positions and percentages, bitrate, and detailed stream/transcoding information.
 	- Timing and completion semantics are handled in the model and DTOs, with percentage calculations done in the DTO layer (not stored in the DB). Completion is determined using a 95% watched threshold.

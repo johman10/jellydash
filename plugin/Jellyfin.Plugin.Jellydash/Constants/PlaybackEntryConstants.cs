@@ -10,6 +10,8 @@ namespace Jellyfin.Plugin.Jellydash.Constants
         /// </summary>
         public const string Columns = @"
             PlaybackId,
+            SessionId,
+            PlaylistItemId,
             ItemId,
             ParentItemId,
             ContentType,
@@ -65,6 +67,8 @@ namespace Jellyfin.Plugin.Jellydash.Constants
         /// </summary>
         public const string Parameters = @"
             @PlaybackId,
+            @SessionId,
+            @PlaylistItemId,
             @ItemId,
             @ParentItemId,
             @ContentType,
@@ -120,6 +124,8 @@ namespace Jellyfin.Plugin.Jellydash.Constants
         /// </summary>
         public const string UpdateSetClause = @"
             PlaybackId = @PlaybackId,
+            SessionId = @SessionId,
+            PlaylistItemId = @PlaylistItemId,
             ItemId = @ItemId,
             ParentItemId = @ParentItemId,
             ContentType = @ContentType,

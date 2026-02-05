@@ -27,6 +27,16 @@ public class PlaybackEntry
     public required Guid PlaybackId { get; set; }
 
     /// <summary>
+    /// Gets or sets the Jellyfin session identifier used to generate the PlaybackId.
+    /// </summary>
+    public string? SessionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Jellyfin playlist item identifier used to generate the PlaybackId.
+    /// </summary>
+    public string? PlaylistItemId { get; set; }
+
+    /// <summary>
     /// Gets or sets the Jellyfin item identifier.
     /// </summary>
     public Guid ItemId { get; set; }
@@ -520,6 +530,8 @@ public class PlaybackEntry
         return new PlaybackEntry
         {
             PlaybackId = GeneratePlaybackId(eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id),
+            SessionId = eventArgs.Session.Id,
+            PlaylistItemId = eventArgs.Session.PlaylistItemId,
             ItemId = eventArgs.MediaInfo.Id,
             ParentItemId = eventArgs.MediaInfo.ParentId,
             ContentType = ContentTypeExtensions.FromBaseItemKind(eventArgs.MediaInfo.Type),
