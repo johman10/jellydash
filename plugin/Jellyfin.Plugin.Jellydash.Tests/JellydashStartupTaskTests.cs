@@ -111,7 +111,7 @@ public sealed class JellydashStartupTaskTests
         Assert.True(entry1After.IsCompleted);
         Assert.False(entry1After.IsPaused);
         Assert.NotNull(entry1After.EndTime);
-        Assert.Equal(5000, entry1After.EndPositionTicks);
+        Assert.Equal(10000, entry1After.EndPositionTicks); // Normalized to RuntimeTicks since 50% exceeds 10% threshold
 
         // Verify entry2 was deleted
         var entry2After = await repository.GetRecentlyCompletedByPlaybackIdAsync(incompleteEntry2.PlaybackId, cancellationToken);
