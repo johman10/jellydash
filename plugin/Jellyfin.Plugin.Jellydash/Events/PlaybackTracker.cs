@@ -57,7 +57,6 @@ public class PlaybackTracker :
                 return;
             }
 
-            )
             var contentType = ContentTypeExtensions.FromBaseItemKind(media.Type);
             var imageHash = await _imageCaptureService.CaptureImageAsync(eventArgs.Item, contentType, default).ConfigureAwait(false);
             var entry = PlaybackEntry.FromStartEvent(eventArgs, imageHash);
