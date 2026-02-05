@@ -2,43 +2,58 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master
+    paths:
+      - 'pubspec.yaml'
   workflow_dispatch:
-    inputs:
-      tags:
-        description: 'The tag to build the release for (e.g., v1.2.3). The tag must already exist.'
-        required: true
-        default: 'warning'
-        type: string
 
 permissions:
   contents: write
 
 jobs:
-  get-version:
+  get-version-info:
     name: Extract Version
     runs-on: ubuntu-latest
     outputs:
       VERSION: ${{ steps.version.outputs.VERSION }}
+      VERSION_CHANGED: ${{ steps.check.outputs.VERSION_CHANGED }}
     steps:
-      - name: Get version from tag
-        id: version
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if version changed
+        id: check
         shell: bash
         run: |
+          CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          PREVIOUS_VERSION=$(git show HEAD~1:pubspec.yaml | grep '^version:' | sed 's/version: //' | tr -d ' ')
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Previous version: $PREVIOUS_VERSION"
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION=${{ github.event.inputs.tags }}
-            VERSION=${VERSION#v}  # Remove 'v' prefix if present
+            echo "VERSION_CHANGED=true" >> $GITHUB_OUTPUT
+            echo "VERSION=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "Manual trigger - proceeding with release"
           else
-            VERSION=${GITHUB_REF#refs/tags/v}
+            if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+              echo "VERSION_CHANGED=true" >> $GITHUB_OUTPUT
+              echo "VERSION=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+              echo "Version changed - proceeding with release"
+            else
+              echo "VERSION_CHANGED=false" >> $GITHUB_OUTPUT
+              echo "Version unchanged - skipping release"
+            fi
           fi
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
 
   build-plugin:
     name: Build Jellyfin Plugin
     runs-on: ubuntu-latest
-    needs: get-version
+    needs: get-version-info
+    if: needs.get-version-info.outputs.VERSION_CHANGED == 'true'
 
     steps:
       - name: Checkout repository
@@ -52,7 +67,7 @@ jobs:
       - name: Update csproj version
         working-directory: plugin/Jellyfin.Plugin.Jellydash
         run: |
-          VERSION=${{ needs.get-version.outputs.VERSION }}
+          VERSION=${{ needs.get-version-info.outputs.VERSION }}
           sed -i "/<PropertyGroup>/a\    <AssemblyVersion>$VERSION</AssemblyVersion>\n    <FileVersion>$VERSION</FileVersion>\n    <Version>$VERSION</Version>" Jellyfin.Plugin.Jellydash.csproj
 
       - name: Restore .NET dependencies
@@ -70,12 +85,12 @@ jobs:
       - name: Create plugin ZIP
         working-directory: plugin/Jellyfin.Plugin.Jellydash/publish
         run: |
-          zip -r ../../../jellydash-plugin-${{ needs.get-version.outputs.VERSION }}.zip .
+          zip -r ../../../jellydash-plugin-${{ needs.get-version-info.outputs.VERSION }}.zip .
 
       - name: Calculate checksum
         id: checksum
         run: |
-          CHECKSUM=$(md5sum jellydash-plugin-${{ needs.get-version.outputs.VERSION }}.zip | cut -d ' ' -f 1)
+          CHECKSUM=$(md5sum jellydash-plugin-${{ needs.get-version-info.outputs.VERSION }}.zip | cut -d ' ' -f 1)
           echo "CHECKSUM=$CHECKSUM" >> $GITHUB_OUTPUT
           echo "Checksum: $CHECKSUM"
 
@@ -83,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jellydash-plugin
-          path: jellydash-plugin-${{ needs.get-version.outputs.VERSION }}.zip
+          path: jellydash-plugin-${{ needs.get-version-info.outputs.VERSION }}.zip
 
       - name: Store checksum
         run: echo "${{ steps.checksum.outputs.CHECKSUM }}" > plugin-checksum.txt
@@ -97,7 +112,8 @@ jobs:
   build-web:
     name: Build Web App
     runs-on: ubuntu-latest
-    needs: get-version
+    needs: get-version-info
+    if: needs.get-version-info.outputs.VERSION_CHANGED == 'true'
 
     steps:
       - name: Checkout repository
@@ -118,18 +134,19 @@ jobs:
       - name: Create web archive
         run: |
           cd build/web
-          tar -czf ../../jellydash-web-${{ needs.get-version.outputs.VERSION }}.tar.gz .
+          tar -czf ../../jellydash-web-${{ needs.get-version-info.outputs.VERSION }}.tar.gz .
 
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
           name: jellydash-web
-          path: jellydash-web-${{ needs.get-version.outputs.VERSION }}.tar.gz
+          path: jellydash-web-${{ needs.get-version-info.outputs.VERSION }}.tar.gz
 
   build-android:
     name: Build Android App
     runs-on: ubuntu-latest
-    needs: get-version
+    needs: get-version-info
+    if: needs.get-version-info.outputs.VERSION_CHANGED == 'true'
 
     steps:
       - name: Checkout repository
@@ -168,21 +185,22 @@ jobs:
 
       - name: Rename artifacts
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk jellydash-android-${{ needs.get-version.outputs.VERSION }}.apk
-          cp build/app/outputs/bundle/release/app-release.aab jellydash-android-${{ needs.get-version.outputs.VERSION }}.aab
+          cp build/app/outputs/flutter-apk/app-release.apk jellydash-android-${{ needs.get-version-info.outputs.VERSION }}.apk
+          cp build/app/outputs/bundle/release/app-release.aab jellydash-android-${{ needs.get-version-info.outputs.VERSION }}.aab
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
           name: jellydash-android
           path: |
-            jellydash-android-${{ needs.get-version.outputs.VERSION }}.apk
-            jellydash-android-${{ needs.get-version.outputs.VERSION }}.aab
+            jellydash-android-${{ needs.get-version-info.outputs.VERSION }}.apk
+            jellydash-android-${{ needs.get-version-info.outputs.VERSION }}.aab
 
   build-ios:
     name: Build iOS App
     runs-on: macos-latest
-    needs: get-version
+    needs: get-version-info
+    if: needs.get-version-info.outputs.VERSION_CHANGED == 'true'
 
     steps:
       - name: Checkout repository
@@ -213,18 +231,19 @@ jobs:
       - name: Create iOS archive
         run: |
           cd build/ios/iphoneos
-          tar -czf ../../../jellydash-ios-${{ needs.get-version.outputs.VERSION }}.tar.gz Runner.app
+          tar -czf ../../../jellydash-ios-${{ needs.get-version-info.outputs.VERSION }}.tar.gz Runner.app
 
       - name: Upload iOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: jellydash-ios
-          path: jellydash-ios-${{ needs.get-version.outputs.VERSION }}.tar.gz
+          path: jellydash-ios-${{ needs.get-version-info.outputs.VERSION }}.tar.gz
 
   build-macos:
     name: Build macOS App
     runs-on: macos-latest
-    needs: get-version
+    needs: get-version-info
+    if: needs.get-version-info.outputs.VERSION_CHANGED == 'true'
 
     steps:
       - name: Checkout repository
@@ -261,19 +280,20 @@ jobs:
             --window-size 600 400 \
             --icon-size 100 \
             --app-drop-link 450 185 \
-            jellydash-macos-${{ needs.get-version.outputs.VERSION }}.dmg \
+            jellydash-macos-${{ needs.get-version-info.outputs.VERSION }}.dmg \
             build/macos/Build/Products/Release/jellydash.app
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: jellydash-macos
-          path: jellydash-macos-${{ needs.get-version.outputs.VERSION }}.dmg
+          path: jellydash-macos-${{ needs.get-version-info.outputs.VERSION }}.dmg
 
   build-linux:
     name: Build Linux App
     runs-on: ubuntu-latest
-    needs: get-version
+    needs: get-version-info
+    if: needs.get-version-info.outputs.VERSION_CHANGED == 'true'
 
     steps:
       - name: Checkout repository
@@ -299,18 +319,19 @@ jobs:
       - name: Create Linux archive
         run: |
           cd build/linux/x64/release/bundle
-          tar -czf ../../../../../jellydash-linux-${{ needs.get-version.outputs.VERSION }}.tar.gz .
+          tar -czf ../../../../../jellydash-linux-${{ needs.get-version-info.outputs.VERSION }}.tar.gz .
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: jellydash-linux
-          path: jellydash-linux-${{ needs.get-version.outputs.VERSION }}.tar.gz
+          path: jellydash-linux-${{ needs.get-version-info.outputs.VERSION }}.tar.gz
 
   build-windows:
     name: Build Windows App
     runs-on: windows-latest
-    needs: get-version
+    needs: get-version-info
+    if: needs.get-version-info.outputs.VERSION_CHANGED == 'true'
 
     steps:
       - name: Checkout repository
@@ -332,18 +353,19 @@ jobs:
         shell: bash
         run: |
           cd build/windows/x64/runner/Release
-          7z a ../../../../../jellydash-windows-${{ needs.get-version.outputs.VERSION }}.zip .
+          7z a ../../../../../jellydash-windows-${{ needs.get-version-info.outputs.VERSION }}.zip .
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: jellydash-windows
-          path: jellydash-windows-${{ needs.get-version.outputs.VERSION }}.zip
+          path: jellydash-windows-${{ needs.get-version-info.outputs.VERSION }}.zip
 
   release:
     name: Create Unified Release
-    needs: [get-version, build-plugin, build-web, build-android, build-ios, build-macos, build-linux, build-windows]
+    needs: [get-version-info, build-plugin, build-web, build-android, build-ios, build-macos, build-linux, build-windows]
     runs-on: ubuntu-latest
+    if: needs.get-version-info.outputs.VERSION_CHANGED == 'true'
 
     steps:
       - name: Checkout repository
@@ -371,14 +393,14 @@ jobs:
             const { data } = await github.rest.repos.generateReleaseNotes({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: 'v${{ needs.get-version.outputs.VERSION }}',
+              tag_name: 'v${{ needs.get-version-info.outputs.VERSION }}',
             });
             return data.body;
           result-encoding: string
 
       - name: Update manifest.json
         run: |
-          export VERSION="${{ needs.get-version.outputs.VERSION }}"
+          export VERSION="${{ needs.get-version-info.outputs.VERSION }}"
           export CHECKSUM="${{ steps.checksum.outputs.CHECKSUM }}"
           export CHANGELOG="${{ steps.release_notes.outputs.result }}"
           export TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S")
@@ -426,12 +448,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add plugin/manifest.json
-          git commit -m "Update manifest.json for v${{ needs.get-version.outputs.VERSION }}"
-          git push origin master
+          git commit -m "Update manifest.json for v${{ needs.get-version-info.outputs.VERSION }}" || echo "No changes to commit"
+          git push origin master || echo "No changes to push"
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ needs.get-version-info.outputs.VERSION }}" -m "${{ steps.release_notes.outputs.result }}"
+          git push origin "${{ needs.get-version-info.outputs.VERSION }}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ needs.get-version-info.outputs.VERSION }}
           files: |
             artifacts/jellydash-plugin/*.zip
             artifacts/jellydash-web/*.tar.gz
@@ -447,7 +477,7 @@ jobs:
             ## Downloads
 
             ### Jellyfin Plugin
-            - **jellydash-plugin-${{ needs.get-version.outputs.VERSION }}.zip**: Install via Jellyfin's plugin catalog or manual upload
+            - **jellydash-plugin-${{ needs.get-version-info.outputs.VERSION }}.zip**: Install via Jellyfin's plugin catalog or manual upload
 
             ### Flutter Apps
             - **Web**: Extract tar.gz and serve with a web server
