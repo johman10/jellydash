@@ -57,10 +57,12 @@ public class PlaybackTracker :
                 return;
             }
 
+            )
             var contentType = ContentTypeExtensions.FromBaseItemKind(media.Type);
             var imageHash = await _imageCaptureService.CaptureImageAsync(eventArgs.Item, contentType, default).ConfigureAwait(false);
             var entry = PlaybackEntry.FromStartEvent(eventArgs, imageHash);
 
+            _logger.LogInformation("Playback started event with playback ID {PlaybackId} (based on {SessionId}, {PlaylistItemId}, {MediaId})", entry.PlaybackId, eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id);
             await _repository.AppendAsync(entry, default).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -90,6 +92,7 @@ public class PlaybackTracker :
             }
 
             var entry = PlaybackEntry.FromProgressEvent(existing, eventArgs, imageHash);
+            _logger.LogInformation("Playback progress event for playback ID {PlaybackId} (based on {SessionId}, {PlaylistItemId}, {MediaId})", entry.PlaybackId, eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id);
             await _repository.Upsert(entry, default).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -121,6 +124,7 @@ public class PlaybackTracker :
             var minResumePct = _configurationManager.Configuration.MinResumePct;
             var maxResumePct = _configurationManager.Configuration.MaxResumePct;
             var entry = PlaybackEntry.FromStopEvent(existing, eventArgs, imageHash, maxResumePct);
+            _logger.LogInformation("Playback stop event for playback ID {PlaybackId} (based on {SessionId}, {PlaylistItemId}, {MediaId})", entry.PlaybackId, eventArgs.Session.Id, eventArgs.Session.PlaylistItemId, eventArgs.MediaInfo.Id);
             if (entry.ShouldTrackInHistory(minResumePct))
             {
                 await _repository.Upsert(entry, default).ConfigureAwait(false);
@@ -158,6 +162,7 @@ public class PlaybackTracker :
             var minResumePct = _configurationManager.Configuration.MinResumePct;
             var maxResumePct = _configurationManager.Configuration.MaxResumePct;
             var entry = PlaybackEntry.FromSessionEndedEvent(existing, eventArgs, maxResumePct);
+            _logger.LogInformation("Playback stop event for playback ID {PlaybackId} (based on {SessionId}, {PlaylistItemId}, {MediaId})", entry.PlaybackId, session.Id, session.PlaylistItemId, session.NowPlayingItem.Id);
             if (entry.ShouldTrackInHistory(minResumePct))
             {
                 await _repository.Upsert(entry, default).ConfigureAwait(false);
