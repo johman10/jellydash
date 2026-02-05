@@ -69,6 +69,7 @@ High‑level pieces:
 	- To facilitate debugging of PlaybackId changes, the individual components used to generate the PlaybackId (`SessionId`, `PlaylistItemId`, and `ItemId`) are now stored separately in the database. This allows identification of which source value changed when PlaybackId unexpectedly changes between events.
 	- `Models/PlaybackEntryDto.cs` and related DTOs (for identity, user, client, timing, streams, and transcoding) define the API shape returned to the Jellydash UI.
 	- Fields are chosen to map cleanly onto the Flutter `Session` / `CurrentActivityCard` UI: user id + name, item title/series/season/episode/year, client + device, span start/end, positions and percentages, bitrate, and detailed stream/transcoding information.
+	- The `UpdatedAt` field tracks when each entry was last modified, automatically updated via SQLite trigger on updates. This timestamp is used as the `EndTime` for incomplete sessions during startup cleanup, providing a more accurate end time than the server restart time.
 	- Timing and completion semantics are handled in the model and DTOs, with percentage calculations done in the DTO layer (not stored in the DB). Completion is determined using a 95% watched threshold.
 	- Dapper type handlers for `Guid` and `Collection<string>` are registered to ensure correct mapping between C# models and the SQLite schema.
 
@@ -101,6 +102,7 @@ High‑level pieces:
 		- `GetRecentlyCompletedByPlaybackIdAsync(Guid playbackId, ...)` — lookup the completed row for a given playback instance.
 		- `GetPageAsync(int limit, int? beforeId, DateTime? beforeEndUtc, CancellationToken)` — paged, most‑recent‑first query used by the `/Jellydash/history` endpoint. This now filters to `IsCompleted = 1` so only completed spans appear in history.
 		- `DeleteOlderThanAsync(DateTime cutoffUtc, CancellationToken)` — delete rows with `EndUtc < cutoffUtc` (completed or not), used by the scheduled cleanup task.
+		- `MarkAllIncompleteAsCompletedAsync(CancellationToken)` — marks all incomplete sessions as completed; used on server startup to clean up sessions from abrupt shutdowns.
 	- Concurrency:
 		- Uses a static `SemaphoreSlim` guard to ensure DB access is serialized across threads.
 	- Migrations:
@@ -112,7 +114,17 @@ High‑level pieces:
 	- In `RegisterServices` the plugin registers:
 		- `IEventConsumer<PlaybackStartEventArgs>` → `ActivityTracker`
 		- `IEventConsumer<PlaybackStopEventArgs>` → `ActivityTracker`
-	- Jellyfin discovers `IPluginServiceRegistrator` implementations in plugin assemblies at startup and calls `RegisterServices`, so no manual server configuration is required. Once registered, Jellyfin’s `EventManager` will resolve and call `ActivityTracker` whenever playback starts or stops.
+		- `IHostedService` → `JellydashStartupTask` — runs on server startup to mark all incomplete sessions as completed (see startup cleanup below).
+	- Jellyfin discovers `IPluginServiceRegistrator` implementations in plugin assemblies at startup and calls `RegisterServices`, so no manual server configuration is required. Once registered, Jellyfin's `EventManager` will resolve and call `ActivityTracker` whenever playback starts or stops.
+
+- **Startup cleanup**
+	- `Services/JellydashStartupTask.cs` implements `IHostedService` and runs when the Jellyfin server starts.
+	- Purpose: When the server is shut down abruptly, playback end events may not fire, leaving incomplete sessions in the database. On startup, this task marks all incomplete sessions (`IsCompleted = 0`) as completed using their `UpdatedAt` timestamp as the `EndTime` to reflect when the last progress update occurred.
+	- Implementation:
+		- Calls `PlaybackEntryRepository.MarkAllIncompleteAsCompletedAsync` which sets `IsCompleted = 1`, `EndTime = UpdatedAt`, and `EndPositionTicks = COALESCE(EndPositionTicks, StartPositionTicks)` for all incomplete entries.
+		- Using `UpdatedAt` as `EndTime` provides a more accurate end time (reflecting the last progress update before shutdown) rather than using the current startup time.
+		- Logs the count of entries marked as completed (or debug logs if none found).
+	- This ensures the activity view remains accurate even after unexpected server shutdowns.
 
 - **Plugin configuration / retention**
 	- `PluginConfiguration` includes settings such as:

@@ -136,6 +136,11 @@ public class PlaybackEntry
     public DateTimeOffset? EndTime { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC timestamp when this entry was last updated.
+    /// </summary>
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    /// <summary>
     /// Gets or sets the total runtime of the item in ticks.
     /// </summary>
     public long? RuntimeTicks { get; set; }
@@ -309,6 +314,7 @@ public class PlaybackEntry
         var entry = FromEvent(eventArgs);
         // For start events, set the start time and initial position.
         entry.StartTime = DateTimeOffset.UtcNow;
+        entry.UpdatedAt = DateTimeOffset.UtcNow;
         entry.StartPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
         entry.IsCompleted = false;
         entry.EndPositionTicks = eventArgs.PlaybackPositionTicks ?? 0;
@@ -378,7 +384,7 @@ public class PlaybackEntry
         entry.StartTime = existing?.StartTime ?? DateTimeOffset.UtcNow;
         entry.StartPositionTicks = existing?.StartPositionTicks ?? 0;
         var endPosition = eventArgs.PlaybackPositionTicks ?? 0;
-        entry.EndPositionTicks = NormalizeEndPosition(endPosition, entry.RuntimeTicks, maxResumePct);
+        entry.EndPositionTicks = NormalizedEndPosition(endPosition, entry.RuntimeTicks, maxResumePct);
         entry.IsCompleted = true;
         entry.IsPaused = false;
         entry.EndTime = eventArgs.Session.LastPlaybackCheckIn;
@@ -404,7 +410,7 @@ public class PlaybackEntry
     {
         var entry = existing;
         var endPosition = eventArgs.Argument.PlayState?.PositionTicks ?? existing.EndPositionTicks;
-        entry.EndPositionTicks = NormalizeEndPosition(endPosition, entry.RuntimeTicks, maxResumePct);
+        entry.EndPositionTicks = NormalizedEndPosition(endPosition, entry.RuntimeTicks, maxResumePct);
         entry.IsPaused = false;
         entry.IsCompleted = true;
         entry.EndTime = eventArgs.Argument.LastPlaybackCheckIn;
@@ -469,7 +475,7 @@ public class PlaybackEntry
     /// If RuntimeTicks is null or zero, returns the original EndPositionTicks.
     /// If MaxResumePct is null or zero, returns the original EndPositionTicks.
     /// </remarks>
-    private static long? NormalizeEndPosition(
+    public static long? NormalizedEndPosition(
         long? endPositionTicks,
         long? runtimeTicks,
         int? maxResumePct)

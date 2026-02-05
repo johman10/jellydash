@@ -314,4 +314,25 @@ LIMIT 1;";
             DbLock.Release();
         }
     }
+
+    /// <summary>
+    /// Gets all incomplete playback entries from the database.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A list of incomplete playback entries.</returns>
+    public async Task<IReadOnlyList<PlaybackEntry>> GetAllIncompleteEntriesAsync(CancellationToken cancellationToken)
+    {
+        await DbLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            using var connection = new SqliteConnection(_databaseHelper.ConnectionString);
+            var sql = "SELECT * FROM PlaybackEntries WHERE IsCompleted = 0;";
+            var entries = await connection.QueryAsync<PlaybackEntry>(sql).ConfigureAwait(false);
+            return entries.AsList();
+        }
+        finally
+        {
+            DbLock.Release();
+        }
+    }
 }
