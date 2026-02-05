@@ -386,6 +386,7 @@ public class PlaybackEntryRepositoryTests
             DeviceName = "TestDevice",
             StartTime = startTime,
             EndTime = endUtc,
+            UpdatedAt = endUtc ?? startTime,
             IsCompleted = endUtc.HasValue
         };
     }
@@ -458,5 +459,56 @@ public class PlaybackEntryRepositoryTests
         // Verify entry no longer exists
         var afterDelete = await repository.GetRecentlyIncompletedByPlaybackIdAsync(playbackId, cancellationToken);
         Assert.Null(afterDelete);
+    }
+
+    [Fact]
+    public async Task GetAllIncompleteEntriesAsync_ReturnsOnlyIncompleteEntries()
+    {
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
+        var cancellationToken = CancellationToken.None;
+
+        // Ensure a clean database.
+        await CleanDatabaseAsync(repository);
+
+        var now = DateTimeOffset.UtcNow;
+
+        // Create incomplete entries
+        var incompleteEntry1 = CreateEntry(now.AddMinutes(-30), null, ContentType.Movie);
+        var incompleteEntry2 = CreateEntry(now.AddMinutes(-20), null, ContentType.Episode);
+
+        // Create a completed entry
+        var completedEntry = CreateEntry(now.AddMinutes(-10), now, ContentType.Movie);
+
+        await repository.AppendAsync(incompleteEntry1, cancellationToken);
+        await repository.AppendAsync(incompleteEntry2, cancellationToken);
+        await repository.AppendAsync(completedEntry, cancellationToken);
+
+        // Get incomplete entries
+        var incompleteEntries = await repository.GetAllIncompleteEntriesAsync(cancellationToken);
+
+        Assert.Equal(2, incompleteEntries.Count);
+        Assert.All(incompleteEntries, entry => Assert.False(entry.IsCompleted));
+    }
+
+    [Fact]
+    public async Task GetAllIncompleteEntriesAsync_NoIncompleteEntries_ReturnsEmpty()
+    {
+        var repository = new PlaybackEntryRepository(DatabaseHelper);
+        var cancellationToken = CancellationToken.None;
+
+        // Ensure a clean database.
+        await CleanDatabaseAsync(repository);
+
+        // Create only completed entries
+        var entry1 = CreateEntry(DateTimeOffset.UtcNow.AddMinutes(-20), DateTimeOffset.UtcNow.AddMinutes(-10), ContentType.Movie);
+        var entry2 = CreateEntry(DateTimeOffset.UtcNow.AddMinutes(-10), DateTimeOffset.UtcNow, ContentType.Episode);
+
+        await repository.AppendAsync(entry1, cancellationToken);
+        await repository.AppendAsync(entry2, cancellationToken);
+
+        // Get incomplete entries
+        var incompleteEntries = await repository.GetAllIncompleteEntriesAsync(cancellationToken);
+
+        Assert.Empty(incompleteEntries);
     }
 }

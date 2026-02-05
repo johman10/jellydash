@@ -45,5 +45,8 @@ public sealed class JellydashServiceRegistrator : IPluginServiceRegistrator
             var applicationPaths = sp.GetRequiredService<IApplicationPaths>();
             return new ImageCaptureService(imageProcessor, libraryManager, logger, applicationPaths.DataPath);
         });
+
+        // Register startup task to clean up incomplete sessions on server start.
+        serviceCollection.AddHostedService<JellydashStartupTask>();
     }
 }
