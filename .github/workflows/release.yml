@@ -16,7 +16,7 @@ jobs:
     name: Extract Version
     runs-on: ubuntu-latest
     outputs:
-      VERSION: ${{ steps.version.outputs.VERSION }}
+      VERSION: ${{ steps.check.outputs.VERSION }}
       VERSION_CHANGED: ${{ steps.check.outputs.VERSION_CHANGED }}
     steps:
       - name: Checkout repository
@@ -45,6 +45,7 @@ jobs:
               echo "Version changed - proceeding with release"
             else
               echo "VERSION_CHANGED=false" >> $GITHUB_OUTPUT
+              echo "VERSION=$CURRENT_VERSION" >> $GITHUB_OUTPUT
               echo "Version unchanged - skipping release"
             fi
           fi
@@ -393,7 +394,7 @@ jobs:
             const { data } = await github.rest.repos.generateReleaseNotes({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: 'v${{ needs.get-version-info.outputs.VERSION }}',
+              tag_name: '${{ needs.get-version-info.outputs.VERSION }}',
             });
             return data.body;
           result-encoding: string
@@ -404,7 +405,7 @@ jobs:
           export CHECKSUM="${{ steps.checksum.outputs.CHECKSUM }}"
           export CHANGELOG="${{ steps.release_notes.outputs.result }}"
           export TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S")
-          export DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/jellydash-plugin-${VERSION}.zip"
+          export DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/jellydash-plugin-${VERSION}.zip"
           export TARGET_ABI=$(grep -oP 'Jellyfin.Controller" Version="\K[^"]+' plugin/Jellyfin.Plugin.Jellydash/Jellyfin.Plugin.Jellydash.csproj)
 
           # Get the target ABI from Jellyfin.Controller package version in csproj
@@ -448,7 +449,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add plugin/manifest.json
-          git commit -m "Update manifest.json for v${{ needs.get-version-info.outputs.VERSION }}" || echo "No changes to commit"
+          git commit -m "Update manifest.json for ${{ needs.get-version-info.outputs.VERSION }}" || echo "No changes to commit"
           git push origin master || echo "No changes to push"
 
       - name: Create git tag
@@ -461,7 +462,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.get-version-info.outputs.VERSION }}
+          tag_name: ${{ needs.get-version-info.outputs.VERSION }}
           files: |
             artifacts/jellydash-plugin/*.zip
             artifacts/jellydash-web/*.tar.gz

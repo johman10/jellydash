@@ -8,14 +8,6 @@
     "overview": "Jellydash provides real-time activity tracking and a dashboard view for your Jellyfin server. Monitor current playback sessions, view recent activity, and get insights into media usage.",
     "versions": [
       {
-        "version": "",
-        "changelog": "## What's Changed\n* Add SessionId and PlaylistItemId to the DB by @johman10 in https://github.com/johman10/jellydash/pull/21\n* Mark incomplete sessions as completed upon start by @johman10 in https://github.com/johman10/jellydash/pull/22\n* Improve release cycle by @johman10 in https://github.com/johman10/jellydash/pull/20\n\n\n**Full Changelog**: https://github.com/johman10/jellydash/compare/v0.0.2...v",
-        "targetAbi": "10.11.5",
-        "sourceUrl": "https://github.com/johman10/jellydash/releases/download/v/jellydash-plugin-.zip",
-        "checksum": "985b77a8f6f5966b03252cd36c7c0a9b",
-        "timestamp": "2026-02-05 20:28:13"
-      },
-      {
         "version": "0.0.2",
         "changelog": "## What's Changed\n* Improve date handling by @johman10 in https://github.com/johman10/jellydash/pull/16\n* Improve image handling by @johman10 in https://github.com/johman10/jellydash/pull/17\n* Optimize progress handling by @johman10 in https://github.com/johman10/jellydash/pull/18\n\n\n**Full Changelog**: https://github.com/johman10/jellydash/compare/v0.0.1...v0.0.2",
         "targetAbi": "10.11.5",
